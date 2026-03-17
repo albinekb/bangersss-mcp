@@ -2,7 +2,7 @@
  * Engine DJ track queries.
  */
 
-import type { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3-multiple-ciphers';
 import type { EdjTrack } from './schema.js';
 
 export interface EdjTrackQuery {

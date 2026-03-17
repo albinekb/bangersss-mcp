@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3-multiple-ciphers';
 import { openEngineDjDb, closeEngineDjDb } from '../engine-dj/db.js';
 import type { EdjTrack, EdjCrate, EdjCrateTrackList } from '../engine-dj/schema.js';
 import type { ServerContext } from '../server.js';

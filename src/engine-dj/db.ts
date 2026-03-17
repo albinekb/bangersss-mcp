@@ -5,8 +5,8 @@
  * database at `Engine Library/Database2/m.db` on each drive or USB stick.
  */
 
-import Database from 'better-sqlite3';
-import type { Database as DatabaseType } from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
+import type { Database as DatabaseType } from 'better-sqlite3-multiple-ciphers';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 

@@ -4,7 +4,7 @@
  * Write operations return journaled SQL rather than executing directly.
  */
 
-import type { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3-multiple-ciphers';
 import type { EdjCrate, EdjTrack } from './schema.js';
 
 /**

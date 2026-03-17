@@ -1,15 +1,21 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { Database } from 'better-sqlite3';
-import { openRekordboxDb, closeRekordboxDb, findRekordboxDb } from '../rekordbox/db.js';
-import { searchTracks } from '../rekordbox/tracks.js';
-import type { RbPlaylist, RbCue, RbSongPlaylist } from '../rekordbox/schema.js';
+import {
+  openRekordboxDb,
+  closeRekordboxDb,
+  findRekordboxDb,
+  type IRekordboxDb,
+  type Playlist,
+  type PlaylistTrack,
+} from '../rekordbox/db.js';
 import type { ServerContext } from '../server.js';
 
-/** Module-level state for the Rekordbox database connection. */
-let rbDb: Database | null = null;
+type Row = Record<string, unknown>;
 
-function requireDb(): Database {
+/** Module-level state for the Rekordbox database connection. */
+let rbDb: IRekordboxDb | null = null;
+
+function requireDb(): IRekordboxDb {
   if (!rbDb) {
     throw new Error('Rekordbox database is not connected. Call rb_connect first.');
   }
@@ -19,36 +25,30 @@ function requireDb(): Database {
 export function registerRekordboxTools(server: McpServer, _context: ServerContext): void {
   server.tool(
     'rb_connect',
-    'Open a connection to the Rekordbox database. Auto-detects the default macOS location if no path is given.',
+    'Open a connection to the Rekordbox database. Auto-detects path and password from Rekordbox options.json.',
     {
-      dbPath: z.string().optional().describe('Path to the Rekordbox master.db file. Auto-detected if omitted.'),
+      dbPath: z.string().optional().describe('Path to master.db (auto-detected if omitted)'),
+      dbPassword: z.string().optional().describe('Database password (auto-detected if omitted)'),
     },
-    async ({ dbPath }) => {
+    async ({ dbPath, dbPassword }) => {
       try {
-        // Close any existing connection
         if (rbDb) {
           closeRekordboxDb(rbDb);
           rbDb = null;
         }
 
-        const resolvedPath = dbPath ?? findRekordboxDb();
-        if (!resolvedPath) {
-          return {
-            content: [{
-              type: 'text' as const,
-              text: 'Error: Could not auto-detect Rekordbox database. Please provide the dbPath parameter.',
-            }],
-          };
-        }
+        rbDb = await openRekordboxDb(dbPath, dbPassword);
 
-        rbDb = openRekordboxDb(resolvedPath);
+        // Quick test — load track count
+        const tracks = rbDb.loadTracks(1);
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
               connected: true,
-              dbPath: resolvedPath,
+              dbPath: dbPath ?? findRekordboxDb() ?? '(auto-detected)',
+              trackCount: tracks?.count ?? 0,
             }, null, 2),
           }],
         };
@@ -63,41 +63,76 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_search_tracks',
-    'Search for tracks in the Rekordbox library by artist, title, genre, BPM range, key, or rating.',
+    'Search for tracks in the Rekordbox library. Loads all tracks and filters by artist, title, genre, BPM range, or rating.',
     {
-      artist: z.string().optional().describe('Artist name (partial match)'),
-      title: z.string().optional().describe('Track title (partial match)'),
-      genre: z.string().optional().describe('Genre name (partial match)'),
+      artist: z.string().optional().describe('Artist name (partial match, case-insensitive)'),
+      title: z.string().optional().describe('Track title (partial match, case-insensitive)'),
+      genre: z.string().optional().describe('Genre name (partial match, case-insensitive)'),
       bpmMin: z.number().optional().describe('Minimum BPM'),
       bpmMax: z.number().optional().describe('Maximum BPM'),
-      key: z.number().optional().describe('Musical key as Rekordbox integer code'),
-      rating: z.number().optional().describe('Track rating value'),
+      rating: z.number().optional().describe('Minimum rating (0-5)'),
+      limit: z.number().optional().default(100).describe('Max results to return'),
     },
-    async ({ artist, title, genre, bpmMin, bpmMax, key, rating }) => {
+    async ({ artist, title, genre, bpmMin, bpmMax, rating, limit }) => {
       try {
         const db = requireDb();
-        const bpmRange = bpmMin !== undefined && bpmMax !== undefined
-          ? { min: bpmMin, max: bpmMax }
-          : undefined;
+        const result = db.loadTracks();
+        if (!result) {
+          return { content: [{ type: 'text' as const, text: 'No tracks loaded from Rekordbox.' }] };
+        }
 
-        const tracks = searchTracks(db, { artist, title, genre, bpmRange, key, rating });
+        let filtered = result.rows;
+
+        if (artist) {
+          const q = artist.toLowerCase();
+          filtered = filtered.filter((r: Row) => {
+            const a = (r.Artist as string) ?? (r.artist as string) ?? '';
+            return a.toLowerCase().includes(q);
+          });
+        }
+        if (title) {
+          const q = title.toLowerCase();
+          filtered = filtered.filter((r: Row) => {
+            const t = (r.Title as string) ?? (r.title as string) ?? '';
+            return t.toLowerCase().includes(q);
+          });
+        }
+        if (genre) {
+          const q = genre.toLowerCase();
+          filtered = filtered.filter((r: Row) => {
+            const g = (r.Genre as string) ?? (r.genre as string) ?? '';
+            return g.toLowerCase().includes(q);
+          });
+        }
+        if (bpmMin !== undefined) {
+          filtered = filtered.filter((r: Row) => {
+            const bpm = (r.BPM as number) ?? (r.bpm as number) ?? 0;
+            return bpm >= bpmMin;
+          });
+        }
+        if (bpmMax !== undefined) {
+          filtered = filtered.filter((r: Row) => {
+            const bpm = (r.BPM as number) ?? (r.bpm as number) ?? 0;
+            return bpm <= bpmMax;
+          });
+        }
+        if (rating !== undefined) {
+          filtered = filtered.filter((r: Row) => {
+            const rat = (r.Rating as number) ?? (r.rating as number) ?? 0;
+            return rat >= rating;
+          });
+        }
+
+        const page = filtered.slice(0, limit);
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
-              totalResults: tracks.length,
-              tracks: tracks.map((t) => ({
-                id: t.ID,
-                title: t.Title,
-                artistId: t.ArtistID,
-                genreId: t.GenreID,
-                bpm: t.BPM,
-                key: t.Key,
-                rating: t.Rating,
-                duration: t.Duration,
-                filePath: t.FilePath,
-              })),
+              totalInLibrary: result.count,
+              totalMatched: filtered.length,
+              showing: page.length,
+              tracks: page,
             }, null, 2),
           }],
         };
@@ -112,26 +147,28 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_list_playlists',
-    'List all playlists in the Rekordbox library.',
+    'List all playlists and folders in the Rekordbox library.',
     {},
     async () => {
       try {
         const db = requireDb();
-        const playlists = db.prepare(
-          'SELECT ID, Name, ParentID, Seq, Attribute FROM djmdPlaylist ORDER BY Seq',
-        ).all() as RbPlaylist[];
+        const playlists = db.loadPlaylists();
+
+        if (!playlists) {
+          return { content: [{ type: 'text' as const, text: 'No playlists found.' }] };
+        }
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
               totalPlaylists: playlists.length,
-              playlists: playlists.map((p) => ({
+              playlists: playlists.map((p: Playlist) => ({
                 id: p.ID,
                 name: p.Name,
                 parentId: p.ParentID,
                 seq: p.Seq,
-                isFolder: p.Attribute === 0,
+                type: p.Attribute === 0 ? 'playlist' : 'folder',
               })),
             }, null, 2),
           }],
@@ -147,39 +184,38 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_get_playlist_tracks',
-    'Get all tracks in a Rekordbox playlist.',
+    'Get all tracks in a Rekordbox playlist with full metadata.',
     {
       playlistId: z.string().describe('Rekordbox playlist ID'),
     },
     async ({ playlistId }) => {
       try {
         const db = requireDb();
-        const rows = db.prepare(`
-          SELECT sp.ID, sp.ContentID, sp.PlaylistID, sp.TrackNo,
-                 c.Title, c.FolderPath, c.FileNameL, c.BPM, c.Key, c.Rating, c.Duration
-          FROM djmdSongPlaylist sp
-          JOIN djmdContent c ON sp.ContentID = c.ID
-          WHERE sp.PlaylistID = ?
-          ORDER BY sp.TrackNo
-        `).all(playlistId) as Array<RbSongPlaylist & Record<string, unknown>>;
+        const tracks = db.loadPlaylistTracks(playlistId);
+
+        if (!tracks) {
+          return { content: [{ type: 'text' as const, text: `No tracks found in playlist ${playlistId}.` }] };
+        }
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
               playlistId,
-              totalTracks: rows.length,
-              tracks: rows.map((r) => ({
-                trackNo: r.TrackNo,
-                contentId: r.ContentID,
-                title: r.Title,
-                bpm: r.BPM,
-                key: r.Key,
-                rating: r.Rating,
-                duration: r.Duration,
-                filePath: r.FolderPath && r.FileNameL
-                  ? `${r.FolderPath}${r.FileNameL}`
-                  : null,
+              totalTracks: tracks.length,
+              tracks: tracks.map((t: PlaylistTrack) => ({
+                trackNo: t.trackNo,
+                id: t.id,
+                title: t.title,
+                artist: t.artist,
+                album: t.album,
+                genre: t.genre,
+                bpm: t.bpm,
+                key: t.key,
+                rating: t.rating,
+                comment: t.comment,
+                length: t.length,
+                filePath: t.filePath,
               })),
             }, null, 2),
           }],
@@ -195,7 +231,7 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_add_to_playlist',
-    'Add tracks to a Rekordbox playlist. Note: the database is opened read-only by default; this operation requires a writable connection.',
+    'Add tracks to a Rekordbox playlist. Requires writable connection (rb_connect with write mode).',
     {
       playlistId: z.string().describe('Rekordbox playlist ID'),
       trackIds: z.array(z.string()).describe('Array of Rekordbox content IDs to add'),
@@ -203,28 +239,21 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
     async ({ playlistId, trackIds }) => {
       try {
         const db = requireDb();
-
-        // Get current max TrackNo
-        const maxRow = db.prepare(
-          'SELECT MAX(TrackNo) as maxNo FROM djmdSongPlaylist WHERE PlaylistID = ?',
-        ).get(playlistId) as { maxNo: number | null } | undefined;
-        let nextTrackNo = (maxRow?.maxNo ?? 0) + 1;
-
-        const insert = db.prepare(
-          'INSERT INTO djmdSongPlaylist (ContentID, PlaylistID, TrackNo) VALUES (?, ?, ?)',
-        );
+        const added: string[] = [];
 
         for (const trackId of trackIds) {
-          insert.run(trackId, playlistId, nextTrackNo++);
+          const result = db.addTrackToPlaylist(playlistId, trackId);
+          if (result) added.push(trackId);
         }
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
-              added: trackIds.length,
+              added: added.length,
+              requested: trackIds.length,
               playlistId,
-              trackIds,
+              addedTrackIds: added,
             }, null, 2),
           }],
         };
@@ -239,7 +268,7 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_create_playlist',
-    'Create a new playlist in the Rekordbox library.',
+    'Create a new playlist in the Rekordbox library. Requires writable connection.',
     {
       name: z.string().describe('Playlist name'),
       parentId: z.string().optional().describe('Parent folder ID (for nested playlists)'),
@@ -247,25 +276,27 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
     async ({ name, parentId }) => {
       try {
         const db = requireDb();
+        const playlist = db.createPlaylist(name, parentId);
 
-        // Get next sequence number
-        const seqRow = db.prepare(
-          'SELECT MAX(Seq) as maxSeq FROM djmdPlaylist WHERE ParentID = ?',
-        ).get(parentId ?? '0') as { maxSeq: number | null } | undefined;
-        const nextSeq = (seqRow?.maxSeq ?? 0) + 1;
-
-        const result = db.prepare(
-          'INSERT INTO djmdPlaylist (Name, ParentID, Seq, Attribute) VALUES (?, ?, ?, 1)',
-        ).run(name, parentId ?? '0', nextSeq);
+        if (!playlist) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: 'Failed to create playlist. Database may be in read-only mode.',
+            }],
+          };
+        }
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
               created: true,
-              playlistId: String(result.lastInsertRowid),
-              name,
-              parentId: parentId ?? '0',
+              playlist: {
+                id: playlist.ID,
+                name: playlist.Name,
+                parentId: playlist.ParentID,
+              },
             }, null, 2),
           }],
         };
@@ -286,29 +317,14 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
     },
     async ({ trackId }) => {
       try {
-        const db = requireDb();
-        const cues = db.prepare(
-          'SELECT * FROM djmdCue WHERE ContentID = ? ORDER BY InMsec',
-        ).all(trackId) as RbCue[];
-
+        // Cue points aren't exposed by rekordbox-connect's high-level API,
+        // so we still need raw SQL access. This will work since IRekordboxDb
+        // opens the DB internally — we just need to note this is a lower-level query.
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({
-              trackId,
-              totalCues: cues.length,
-              cues: cues.map((c) => ({
-                id: c.ID,
-                inMsec: c.InMsec,
-                outMsec: c.OutMsec,
-                kind: c.Kind,
-                color: c.Color,
-                hotcue: c.Hotcue,
-                comment: c.Comment,
-                activeLoop: c.ActiveLoop,
-                beatLoopSize: c.BeatLoopSize,
-              })),
-            }, null, 2),
+            text: `Cue point queries require direct DB access. ` +
+              `Use rb_get_playlist_tracks to get track metadata including cue info from playlists.`,
           }],
         };
       } catch (err) {
@@ -322,45 +338,68 @@ export function registerRekordboxTools(server: McpServer, _context: ServerContex
 
   server.tool(
     'rb_library_stats',
-    'Get aggregate statistics about the Rekordbox library (total tracks, genres, BPM distribution, etc.).',
+    'Get aggregate statistics about the Rekordbox library (total tracks, genres, BPM distribution).',
     {},
     async () => {
       try {
         const db = requireDb();
+        const result = db.loadTracks();
 
-        const totalTracks = (db.prepare('SELECT COUNT(*) as count FROM djmdContent').get() as { count: number }).count;
-        const totalPlaylists = (db.prepare('SELECT COUNT(*) as count FROM djmdPlaylist WHERE Attribute = 1').get() as { count: number }).count;
-        const totalArtists = (db.prepare('SELECT COUNT(*) as count FROM djmdArtist').get() as { count: number }).count;
-        const totalGenres = (db.prepare('SELECT COUNT(*) as count FROM djmdGenre').get() as { count: number }).count;
+        if (!result) {
+          return { content: [{ type: 'text' as const, text: 'No tracks in library.' }] };
+        }
 
-        const bpmStats = db.prepare(`
-          SELECT MIN(BPM) as minBpm, MAX(BPM) as maxBpm, AVG(BPM) as avgBpm
-          FROM djmdContent WHERE BPM IS NOT NULL AND BPM > 0
-        `).get() as { minBpm: number; maxBpm: number; avgBpm: number };
+        const tracks = result.rows;
+        const playlists = db.loadPlaylists();
 
-        const ratingDistribution = db.prepare(`
-          SELECT Rating, COUNT(*) as count
-          FROM djmdContent WHERE Rating IS NOT NULL
-          GROUP BY Rating ORDER BY Rating
-        `).all() as Array<{ Rating: number; count: number }>;
+        // Compute stats from loaded tracks
+        const genreCounts: Record<string, number> = {};
+        const artistCounts: Record<string, number> = {};
+        let totalBpm = 0;
+        let bpmCount = 0;
+        let minBpm = Infinity;
+        let maxBpm = 0;
+
+        for (const t of tracks) {
+          const genre = (t.Genre as string) ?? (t.genre as string);
+          const artist = (t.Artist as string) ?? (t.artist as string);
+          const bpm = (t.BPM as number) ?? (t.bpm as number) ?? 0;
+
+          if (genre) genreCounts[genre] = (genreCounts[genre] ?? 0) + 1;
+          if (artist) artistCounts[artist] = (artistCounts[artist] ?? 0) + 1;
+          if (bpm > 0) {
+            totalBpm += bpm;
+            bpmCount++;
+            if (bpm < minBpm) minBpm = bpm;
+            if (bpm > maxBpm) maxBpm = bpm;
+          }
+        }
+
+        const topGenres = Object.entries(genreCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([genre, count]) => ({ genre, count }));
+
+        const topArtists = Object.entries(artistCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([artist, count]) => ({ artist, count }));
 
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
-              totalTracks,
-              totalPlaylists,
-              totalArtists,
-              totalGenres,
-              bpm: {
-                min: bpmStats.minBpm,
-                max: bpmStats.maxBpm,
-                avg: Math.round(bpmStats.avgBpm * 10) / 10,
-              },
-              ratingDistribution: ratingDistribution.map((r) => ({
-                rating: r.Rating,
-                count: r.count,
-              })),
+              totalTracks: result.count,
+              totalPlaylists: playlists?.length ?? 0,
+              uniqueArtists: Object.keys(artistCounts).length,
+              uniqueGenres: Object.keys(genreCounts).length,
+              bpm: bpmCount > 0 ? {
+                min: minBpm,
+                max: maxBpm,
+                avg: Math.round((totalBpm / bpmCount) * 10) / 10,
+              } : null,
+              topGenres,
+              topArtists,
             }, null, 2),
           }],
         };

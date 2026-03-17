@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';

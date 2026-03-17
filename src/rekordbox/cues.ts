@@ -2,7 +2,7 @@
  * Rekordbox cue point queries.
  */
 
-import type { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3-multiple-ciphers';
 import type { RbCue } from './schema.js';
 
 /**

@@ -7,7 +7,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { Database } from 'better-sqlite3';
+import type { Database } from 'better-sqlite3-multiple-ciphers';
 import type { RbPlaylist, RbTrack } from './schema.js';
 
 /**

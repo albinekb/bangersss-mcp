@@ -1,40 +1,50 @@
 /**
- * Rekordbox database access.
+ * Rekordbox database access using rekordbox-connect.
  *
- * Rekordbox 6+ stores its library in a SQLCipher4-encrypted SQLite database
- * at ~/Library/Pioneer/rekordbox/master.db on macOS.
- *
- * NOTE: The standard `better-sqlite3` package cannot open SQLCipher-encrypted
- * databases. For production use, replace it with `better-sqlite3-multiple-ciphers`
- * which is a drop-in replacement that supports SQLCipher4. The API is identical.
+ * Handles automatic detection of the Rekordbox DB path, password extraction
+ * from options.json, Blowfish decryption, and SQLCipher4 opening.
  */
 
-import Database from 'better-sqlite3';
-import type { Database as DatabaseType } from 'better-sqlite3';
+import {
+  getRekordboxConfig,
+  detectRekordboxDbPath,
+  type Playlist,
+  type PlaylistTrack,
+  type RekordboxTracksPayload,
+} from 'rekordbox-connect';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { createLogger } from '../util/logger.js';
+
+const log = createLogger('rekordbox');
 
 /**
- * Known SQLCipher4 parameters used by Rekordbox 6+.
- * These must be applied via PRAGMA statements immediately after opening.
+ * Interface matching the RekordboxDb class from rekordbox-connect.
  */
-export const SQLCIPHER4_PARAMS = {
-  /** The cipher used by Rekordbox. */
-  cipher: 'sqlcipher',
-  /** SQLCipher compatibility mode. */
-  cipherCompatibility: 4,
-  /** KDF iterations used by Rekordbox. */
-  kdfIter: 256000,
-  /** HMAC algorithm. */
-  hmacAlgorithm: 'HMAC_SHA512',
-  /** KDF algorithm. */
-  kdfAlgorithm: 'PBKDF2_HMAC_SHA512',
-  /** Page size used by Rekordbox. */
-  pageSize: 4096,
-  /** Plaintext header size (Rekordbox does not use a plaintext header). */
-  plaintextHeaderSize: 0,
-} as const;
+export interface IRekordboxDb {
+  open(): void;
+  close(): void;
+  loadTracks(maxRows?: number): RekordboxTracksPayload | undefined;
+  loadPlaylists(): Playlist[] | undefined;
+  loadPlaylistTracks(playlistId: string): PlaylistTrack[] | undefined;
+  createPlaylist(name: string, parentId?: string): Playlist | undefined;
+  addTrackToPlaylist(playlistId: string, contentId: string): unknown;
+}
+
+export type { Playlist, PlaylistTrack } from 'rekordbox-connect';
+
+// Lazily resolved RekordboxDb constructor
+let _RekordboxDbClass: (new (dbPath: string, password: string, readonly?: boolean) => IRekordboxDb) | null = null;
+
+async function getRekordboxDbClass() {
+  if (_RekordboxDbClass) return _RekordboxDbClass;
+  // Dynamic import bypasses the exports map restriction in both tsc and vitest
+  const mod = await import(/* @vite-ignore */ 'rekordbox-connect/dist/db.js');
+  _RekordboxDbClass = mod.RekordboxDb;
+  return _RekordboxDbClass!;
+}
 
 /**
  * Default Rekordbox database path on macOS.
@@ -49,42 +59,56 @@ export const DEFAULT_REKORDBOX_DB_PATH = join(
 
 /**
  * Attempt to auto-detect the Rekordbox master.db on the current system.
- * Returns the path if found, or null otherwise.
  */
 export function findRekordboxDb(): string | null {
-  if (existsSync(DEFAULT_REKORDBOX_DB_PATH)) {
-    return DEFAULT_REKORDBOX_DB_PATH;
-  }
+  const detected = detectRekordboxDbPath();
+  if (detected) return detected;
+  if (existsSync(DEFAULT_REKORDBOX_DB_PATH)) return DEFAULT_REKORDBOX_DB_PATH;
   return null;
 }
 
 /**
- * Open the Rekordbox master.db database.
- *
- * When using `better-sqlite3-multiple-ciphers`, pass a `key` to unlock
- * the encrypted database. With plain `better-sqlite3` the database must
- * be unencrypted or pre-decrypted.
- *
- * @param dbPath - Path to master.db. Defaults to the standard macOS location.
+ * Open the Rekordbox database with automatic decryption.
  */
-export function openRekordboxDb(dbPath?: string): DatabaseType {
-  const resolvedPath = dbPath ?? DEFAULT_REKORDBOX_DB_PATH;
+export async function openRekordboxDb(
+  dbPath?: string,
+  dbPassword?: string,
+  readonly = true,
+): Promise<IRekordboxDb> {
+  let resolvedPath: string;
+  let resolvedPassword: string;
 
-  if (!existsSync(resolvedPath)) {
-    throw new Error(`Rekordbox database not found at: ${resolvedPath}`);
+  try {
+    const config = getRekordboxConfig(dbPath, dbPassword);
+    resolvedPath = config.dbPath;
+    resolvedPassword = config.password;
+  } catch (err) {
+    resolvedPath = dbPath ?? DEFAULT_REKORDBOX_DB_PATH;
+    if (!existsSync(resolvedPath)) {
+      throw new Error(
+        `Rekordbox database not found. Tried auto-detection and path: ${resolvedPath}. ` +
+        `Make sure Rekordbox is installed and has been opened at least once.`,
+      );
+    }
+    if (!dbPassword) {
+      throw new Error(
+        'Could not auto-detect Rekordbox database password from options.json. ' +
+        `Original error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    resolvedPassword = dbPassword;
   }
 
-  const db = new Database(resolvedPath, { readonly: true });
-
-  // Enable WAL mode for better concurrent read performance.
-  db.pragma('journal_mode = WAL');
-
+  log.info(`Opening Rekordbox DB: ${resolvedPath} (readonly: ${readonly})`);
+  const DbClass = await getRekordboxDbClass();
+  const db = new DbClass(resolvedPath, resolvedPassword, readonly);
+  db.open();
   return db;
 }
 
 /**
- * Close a previously opened Rekordbox database connection.
+ * Close a Rekordbox database connection.
  */
-export function closeRekordboxDb(db: DatabaseType): void {
+export function closeRekordboxDb(db: IRekordboxDb): void {
   db.close();
 }
