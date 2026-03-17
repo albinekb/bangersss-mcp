@@ -43,6 +43,13 @@ interface IngestAnalysis {
   suggestedPath?: string;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 function sanitizeFilename(name: string): string {
   return name
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
@@ -86,14 +93,35 @@ function buildLibraryPath(
 export function registerIngestTools(server: McpServer, context: ServerContext): void {
   server.tool(
     'scan_incoming',
-    'Scan a folder (e.g. ~/Downloads) for new audio files and read their tags. ' +
-    'Returns a summary of what was found — file count, formats, missing tags, etc. ' +
-    'This is the first step of the ingest workflow.',
+    'Scan a folder for new audio files and read their tags. Returns summary stats ' +
+    'and optionally paginated/grouped file listings. Use summaryOnly=true for a quick ' +
+    'overview, then drill down with groupBy or limit/offset.',
     {
       path: z.string().describe('Absolute path to the incoming/downloads folder to scan'),
       recursive: z.boolean().optional().default(true).describe('Scan subdirectories'),
+      summaryOnly: z.boolean().optional().default(false)
+        .describe('Only return aggregate stats (format counts, tag coverage, date ranges) — no file list'),
+      groupBy: z.enum(['artist', 'genre', 'date', 'format', 'folder']).optional()
+        .describe('Group results by a field. Returns counts per group instead of individual files'),
+      limit: z.number().optional().default(50)
+        .describe('Max number of files to return in the tracks list (default 50)'),
+      offset: z.number().optional().default(0)
+        .describe('Skip this many files before returning (for pagination)'),
+      sortBy: z.enum(['name', 'date', 'size', 'artist', 'bpm']).optional().default('date')
+        .describe('Sort order for file list (default: date, newest first)'),
+      filter: z.object({
+        artist: z.string().optional().describe('Filter by artist (partial match, case-insensitive)'),
+        genre: z.string().optional().describe('Filter by genre (partial match, case-insensitive)'),
+        format: z.string().optional().describe('Filter by extension, e.g. ".mp3" or ".wav"'),
+        hasTag: z.enum(['title', 'artist', 'genre', 'bpm', 'key']).optional()
+          .describe('Only include files that have this tag'),
+        missingTag: z.enum(['title', 'artist', 'genre', 'bpm', 'key']).optional()
+          .describe('Only include files missing this tag'),
+        dateAfter: z.string().optional().describe('Only files modified after this ISO date'),
+        dateBefore: z.string().optional().describe('Only files modified before this ISO date'),
+      }).optional().describe('Filter the results'),
     },
-    async ({ path: dirPath, recursive }) => {
+    async ({ path: dirPath, recursive, summaryOnly, groupBy, limit, offset, sortBy, filter }) => {
       try {
         const exts = [...SUPPORTED_FORMATS];
         const pattern = `*{${exts.join(',')}}`;
@@ -105,10 +133,10 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           absolute: true,
           onlyFiles: true,
           followSymbolicLinks: false,
+          stats: true,
         });
 
-        files.sort();
-
+        // Build track list with tags
         const tracks: ScannedTrack[] = [];
         const formatCounts: Record<string, number> = {};
         let missingTitle = 0;
@@ -116,11 +144,19 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
         let missingGenre = 0;
         let missingBpm = 0;
         let missingKey = 0;
+        let totalSize = 0;
+        const dateRange = { earliest: '', latest: '' };
 
-        for (const filePath of files) {
-          const stat = await fs.stat(filePath);
+        for (const entry of files) {
+          const filePath = typeof entry === 'string' ? entry : entry.path;
+          const stat = typeof entry === 'string' ? await fs.stat(entry) : await fs.stat(entry.path);
           const ext = path.extname(filePath).toLowerCase();
           formatCounts[ext] = (formatCounts[ext] ?? 0) + 1;
+          totalSize += stat.size;
+
+          const modified = stat.mtime.toISOString();
+          if (!dateRange.earliest || modified < dateRange.earliest) dateRange.earliest = modified;
+          if (!dateRange.latest || modified > dateRange.latest) dateRange.latest = modified;
 
           let tags: TrackMetadata | null = null;
           let tagErrors: string | undefined;
@@ -136,33 +172,175 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
             if (!tags.genre) missingGenre++;
             if (!tags.bpm) missingBpm++;
             if (!tags.key) missingKey++;
+          } else {
+            missingTitle++;
+            missingArtist++;
+            missingGenre++;
+            missingBpm++;
+            missingKey++;
           }
 
           tracks.push({
             path: filePath,
             filename: path.basename(filePath),
             size: stat.size,
-            modified: stat.mtime.toISOString(),
+            modified,
             tags,
             tagErrors,
           });
         }
 
+        const summary = {
+          sourceDirectory: dirPath,
+          totalFiles: tracks.length,
+          totalSize,
+          totalSizeHuman: formatBytes(totalSize),
+          formats: formatCounts,
+          dateRange,
+          tagCoverage: {
+            missingTitle,
+            missingArtist,
+            missingGenre,
+            missingBpm,
+            missingKey,
+          },
+        };
+
+        // Summary only — return just stats
+        if (summaryOnly) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify(summary, null, 2),
+            }],
+          };
+        }
+
+        // Apply filters
+        let filtered = tracks;
+        if (filter) {
+          filtered = tracks.filter((t) => {
+            if (filter.format) {
+              const ext = path.extname(t.path).toLowerCase();
+              if (ext !== filter.format.toLowerCase()) return false;
+            }
+            if (filter.artist && t.tags?.artist) {
+              if (!t.tags.artist.toLowerCase().includes(filter.artist.toLowerCase())) return false;
+            } else if (filter.artist && !t.tags?.artist) {
+              return false;
+            }
+            if (filter.genre && t.tags?.genre) {
+              if (!t.tags.genre.toLowerCase().includes(filter.genre.toLowerCase())) return false;
+            } else if (filter.genre && !t.tags?.genre) {
+              return false;
+            }
+            if (filter.hasTag) {
+              const val = t.tags?.[filter.hasTag as keyof TrackMetadata];
+              if (val === undefined || val === null) return false;
+            }
+            if (filter.missingTag) {
+              const val = t.tags?.[filter.missingTag as keyof TrackMetadata];
+              if (val !== undefined && val !== null) return false;
+            }
+            if (filter.dateAfter && t.modified < filter.dateAfter) return false;
+            if (filter.dateBefore && t.modified > filter.dateBefore) return false;
+            return true;
+          });
+        }
+
+        // Group by mode — return counts per group
+        if (groupBy) {
+          const groups: Record<string, { count: number; totalSize: number; files: string[] }> = {};
+
+          for (const t of filtered) {
+            let key: string;
+            switch (groupBy) {
+              case 'artist':
+                key = t.tags?.artist ?? '(no artist tag)';
+                break;
+              case 'genre':
+                key = t.tags?.genre ?? '(no genre tag)';
+                break;
+              case 'date':
+                key = t.modified.slice(0, 10); // YYYY-MM-DD
+                break;
+              case 'format':
+                key = path.extname(t.path).toLowerCase();
+                break;
+              case 'folder':
+                key = path.dirname(t.path).replace(dirPath, '.') || '.';
+                break;
+              default:
+                key = '(unknown)';
+            }
+
+            if (!groups[key]) groups[key] = { count: 0, totalSize: 0, files: [] };
+            groups[key].count++;
+            groups[key].totalSize += t.size;
+            // Keep max 5 example filenames per group
+            if (groups[key].files.length < 5) {
+              groups[key].files.push(t.filename);
+            }
+          }
+
+          // Sort groups by count descending
+          const sorted = Object.entries(groups)
+            .sort((a, b) => b[1].count - a[1].count)
+            .map(([name, data]) => ({
+              [groupBy]: name,
+              count: data.count,
+              totalSize: formatBytes(data.totalSize),
+              examples: data.files,
+            }));
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                ...summary,
+                groupBy,
+                filteredTotal: filtered.length,
+                groupCount: sorted.length,
+                groups: sorted,
+              }, null, 2),
+            }],
+          };
+        }
+
+        // Sort
+        switch (sortBy) {
+          case 'date':
+            filtered.sort((a, b) => b.modified.localeCompare(a.modified));
+            break;
+          case 'size':
+            filtered.sort((a, b) => b.size - a.size);
+            break;
+          case 'artist':
+            filtered.sort((a, b) =>
+              (a.tags?.artist ?? 'zzz').localeCompare(b.tags?.artist ?? 'zzz'));
+            break;
+          case 'bpm':
+            filtered.sort((a, b) => (a.tags?.bpm ?? 0) - (b.tags?.bpm ?? 0));
+            break;
+          case 'name':
+          default:
+            filtered.sort((a, b) => a.filename.localeCompare(b.filename));
+            break;
+        }
+
+        // Paginate
+        const page = filtered.slice(offset, offset + limit);
+
         return {
           content: [{
             type: 'text' as const,
             text: JSON.stringify({
-              sourceDirectory: dirPath,
-              totalFiles: tracks.length,
-              formats: formatCounts,
-              tagCoverage: {
-                missingTitle,
-                missingArtist,
-                missingGenre,
-                missingBpm,
-                missingKey,
-              },
-              tracks,
+              ...summary,
+              filtered: filtered.length,
+              showing: { offset, limit, count: page.length },
+              hasMore: offset + limit < filtered.length,
+              nextOffset: offset + limit < filtered.length ? offset + limit : null,
+              tracks: page,
             }, null, 2),
           }],
         };
