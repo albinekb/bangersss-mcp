@@ -1,0 +1,686 @@
+/**
+ * Ingest tools — the "scanner mode" workflow.
+ *
+ * Designed for a typical DJ workflow:
+ *   1. Point at a downloads/incoming folder
+ *   2. Scan & analyze everything (tags, BPM, key)
+ *   3. Deduplicate against existing library
+ *   4. Stage moves into organized library structure
+ *   5. Review & commit
+ *
+ * All mutations go through overlay (dry mode) until committed.
+ */
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
+import fg from 'fast-glob';
+import { readTags, type TrackMetadata } from '../tags/tag-reader.js';
+import { analyzeBpm } from '../audio/bpm-analyzer.js';
+import { getKeyInfo } from '../audio/keys.js';
+import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js';
+import { createRenameOp, createWriteTagsOp, createSetBpmOp } from '../plans/operations.js';
+import type { ServerContext } from '../server.js';
+
+interface ScannedTrack {
+  path: string;
+  filename: string;
+  size: number;
+  modified: string;
+  tags: TrackMetadata | null;
+  tagErrors?: string;
+}
+
+interface IngestAnalysis {
+  path: string;
+  filename: string;
+  size: number;
+  tags: TrackMetadata | null;
+  bpm?: { value: number; confidence: number } | null;
+  keyInfo?: { standard: string; camelot: string; openKey: string } | null;
+  issues: string[];
+  suggestedPath?: string;
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildLibraryPath(
+  libraryRoot: string,
+  tags: TrackMetadata,
+  template: string,
+  ext: string,
+): string {
+  const replacements: Record<string, string> = {
+    artist: tags.artist ?? 'Unknown Artist',
+    title: tags.title ?? 'Unknown Title',
+    album: tags.album ?? 'Unknown Album',
+    genre: tags.genre ?? 'Unknown Genre',
+    year: tags.year !== undefined ? String(tags.year) : 'Unknown Year',
+    bpm: tags.bpm !== undefined ? String(Math.round(tags.bpm)) : 'Unknown BPM',
+    key: tags.key ?? 'Unknown Key',
+  };
+
+  // Also add camelot key if available
+  if (tags.key) {
+    const keyInfo = getKeyInfo(tags.key);
+    if (keyInfo) {
+      replacements.camelot = keyInfo.camelot;
+      replacements.openkey = keyInfo.openKey;
+    }
+  }
+
+  let result = template;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'gi'), sanitizeFilename(value));
+  }
+
+  return path.join(libraryRoot, `${result}${ext}`);
+}
+
+export function registerIngestTools(server: McpServer, context: ServerContext): void {
+  server.tool(
+    'scan_incoming',
+    'Scan a folder (e.g. ~/Downloads) for new audio files and read their tags. ' +
+    'Returns a summary of what was found — file count, formats, missing tags, etc. ' +
+    'This is the first step of the ingest workflow.',
+    {
+      path: z.string().describe('Absolute path to the incoming/downloads folder to scan'),
+      recursive: z.boolean().optional().default(true).describe('Scan subdirectories'),
+    },
+    async ({ path: dirPath, recursive }) => {
+      try {
+        const exts = [...SUPPORTED_FORMATS];
+        const pattern = `*{${exts.join(',')}}`;
+        const fullPattern = recursive
+          ? `${dirPath}/**/${pattern}`
+          : `${dirPath}/${pattern}`;
+
+        const files = await fg(fullPattern, {
+          absolute: true,
+          onlyFiles: true,
+          followSymbolicLinks: false,
+        });
+
+        files.sort();
+
+        const tracks: ScannedTrack[] = [];
+        const formatCounts: Record<string, number> = {};
+        let missingTitle = 0;
+        let missingArtist = 0;
+        let missingGenre = 0;
+        let missingBpm = 0;
+        let missingKey = 0;
+
+        for (const filePath of files) {
+          const stat = await fs.stat(filePath);
+          const ext = path.extname(filePath).toLowerCase();
+          formatCounts[ext] = (formatCounts[ext] ?? 0) + 1;
+
+          let tags: TrackMetadata | null = null;
+          let tagErrors: string | undefined;
+          try {
+            tags = await readTags(filePath);
+          } catch (err) {
+            tagErrors = err instanceof Error ? err.message : String(err);
+          }
+
+          if (tags) {
+            if (!tags.title) missingTitle++;
+            if (!tags.artist) missingArtist++;
+            if (!tags.genre) missingGenre++;
+            if (!tags.bpm) missingBpm++;
+            if (!tags.key) missingKey++;
+          }
+
+          tracks.push({
+            path: filePath,
+            filename: path.basename(filePath),
+            size: stat.size,
+            modified: stat.mtime.toISOString(),
+            tags,
+            tagErrors,
+          });
+        }
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              sourceDirectory: dirPath,
+              totalFiles: tracks.length,
+              formats: formatCounts,
+              tagCoverage: {
+                missingTitle,
+                missingArtist,
+                missingGenre,
+                missingBpm,
+                missingKey,
+              },
+              tracks,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error scanning incoming folder: ${message}` }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'analyze_incoming',
+    'Deep-analyze incoming audio files: read tags, detect BPM, identify musical key. ' +
+    'Flags issues like missing tags, untagged BPM, low confidence BPM. ' +
+    'Optionally suggests where each file should go in the library.',
+    {
+      paths: z.array(z.string()).describe('Absolute paths to audio files to analyze'),
+      detectBpm: z.boolean().optional().default(false).describe('Run BPM detection (requires ffmpeg, slower)'),
+      libraryRoot: z.string().optional().describe('Library root path — if set, suggests destination paths'),
+      organizationTemplate: z.string().optional().default('{genre}/{artist}/{title}')
+        .describe('Template for library organization, e.g. "{genre}/{artist}/{title}"'),
+    },
+    async ({ paths: filePaths, detectBpm, libraryRoot, organizationTemplate }) => {
+      try {
+        const results: IngestAnalysis[] = [];
+
+        for (const filePath of filePaths) {
+          const stat = await fs.stat(filePath);
+          const ext = path.extname(filePath);
+          const issues: string[] = [];
+
+          // Read tags
+          let tags: TrackMetadata | null = null;
+          try {
+            tags = await readTags(filePath);
+          } catch (err) {
+            issues.push(`Failed to read tags: ${err instanceof Error ? err.message : String(err)}`);
+          }
+
+          // Check tag completeness
+          if (tags) {
+            if (!tags.title) issues.push('Missing title tag');
+            if (!tags.artist) issues.push('Missing artist tag');
+            if (!tags.genre) issues.push('Missing genre tag');
+            if (!tags.album) issues.push('Missing album tag');
+            if (!tags.year) issues.push('Missing year tag');
+          }
+
+          // BPM detection
+          let bpm: { value: number; confidence: number } | null = null;
+          if (detectBpm) {
+            try {
+              const result = await analyzeBpm(filePath);
+              bpm = { value: result.bpm, confidence: result.confidence };
+              if (result.confidence < 0.5) {
+                issues.push(`Low BPM confidence (${Math.round(result.confidence * 100)}%)`);
+              }
+              if (!tags?.bpm && result.bpm > 0) {
+                issues.push(`BPM not in tags but detected as ${result.bpm}`);
+              } else if (tags?.bpm && Math.abs(tags.bpm - result.bpm) > 2) {
+                issues.push(`BPM mismatch: tag says ${tags.bpm}, detected ${result.bpm}`);
+              }
+            } catch (err) {
+              issues.push(`BPM detection failed: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          } else if (!tags?.bpm) {
+            issues.push('No BPM in tags (use detectBpm to analyze)');
+          }
+
+          // Key info
+          let keyInfo: { standard: string; camelot: string; openKey: string } | null = null;
+          if (tags?.key) {
+            const info = getKeyInfo(tags.key);
+            if (info) {
+              keyInfo = { standard: info.standard, camelot: info.camelot, openKey: info.openKey };
+            }
+          } else {
+            issues.push('No musical key in tags');
+          }
+
+          // Suggest library path
+          let suggestedPath: string | undefined;
+          if (libraryRoot && tags) {
+            suggestedPath = buildLibraryPath(libraryRoot, tags, organizationTemplate, ext);
+          }
+
+          results.push({
+            path: filePath,
+            filename: path.basename(filePath),
+            size: stat.size,
+            tags,
+            bpm,
+            keyInfo,
+            issues,
+            suggestedPath,
+          });
+        }
+
+        const totalIssues = results.reduce((n, r) => n + r.issues.length, 0);
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              totalFiles: results.length,
+              totalIssues,
+              filesWithIssues: results.filter((r) => r.issues.length > 0).length,
+              cleanFiles: results.filter((r) => r.issues.length === 0).length,
+              results,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error analyzing files: ${message}` }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'check_duplicates',
+    'Check if incoming files already exist in the library by comparing artist+title tags, ' +
+    'filename similarity, and file size. Returns matches and near-matches.',
+    {
+      incomingPaths: z.array(z.string()).describe('Paths to incoming files to check'),
+      libraryPath: z.string().describe('Absolute path to the existing music library'),
+    },
+    async ({ incomingPaths, libraryPath }) => {
+      try {
+        // Scan library
+        const exts = [...SUPPORTED_FORMATS];
+        const pattern = `*{${exts.join(',')}}`;
+        const libraryFiles = await fg(`${libraryPath}/**/${pattern}`, {
+          absolute: true,
+          onlyFiles: true,
+        });
+
+        // Build library index: filename -> path, and tag index
+        const libraryIndex = new Map<string, string[]>();
+        const libraryTagIndex = new Map<string, string>(); // "artist|title" -> path
+
+        for (const libFile of libraryFiles) {
+          const basename = path.basename(libFile).toLowerCase();
+          const existing = libraryIndex.get(basename) ?? [];
+          existing.push(libFile);
+          libraryIndex.set(basename, existing);
+
+          try {
+            const tags = await readTags(libFile);
+            if (tags.artist && tags.title) {
+              const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`;
+              libraryTagIndex.set(key, libFile);
+            }
+          } catch {
+            // Skip files that can't be read
+          }
+        }
+
+        // Check each incoming file
+        const results: Array<{
+          incomingPath: string;
+          duplicateType: 'exact_filename' | 'same_track' | 'similar' | 'none';
+          matchedLibraryPath?: string;
+          details?: string;
+        }> = [];
+
+        for (const incoming of incomingPaths) {
+          const basename = path.basename(incoming).toLowerCase();
+          let found = false;
+
+          // 1. Exact filename match
+          const filenameMatches = libraryIndex.get(basename);
+          if (filenameMatches && filenameMatches.length > 0) {
+            results.push({
+              incomingPath: incoming,
+              duplicateType: 'exact_filename',
+              matchedLibraryPath: filenameMatches[0],
+              details: `Same filename found in library (${filenameMatches.length} match${filenameMatches.length > 1 ? 'es' : ''})`,
+            });
+            found = true;
+            continue;
+          }
+
+          // 2. Same artist+title in tags
+          try {
+            const tags = await readTags(incoming);
+            if (tags.artist && tags.title) {
+              const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`;
+              const match = libraryTagIndex.get(key);
+              if (match) {
+                results.push({
+                  incomingPath: incoming,
+                  duplicateType: 'same_track',
+                  matchedLibraryPath: match,
+                  details: `Same artist+title: ${tags.artist} - ${tags.title}`,
+                });
+                found = true;
+                continue;
+              }
+            }
+          } catch {
+            // Can't read tags, skip tag-based check
+          }
+
+          // 3. Similar filename (strip common suffixes like (1), _copy, etc.)
+          const normalized = basename
+            .replace(/\s*\(\d+\)\s*/, '')
+            .replace(/\s*_copy\s*/i, '')
+            .replace(/\s*-\s*copy\s*/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          for (const [libName, libPaths] of libraryIndex) {
+            const libNormalized = libName
+              .replace(/\s*\(\d+\)\s*/, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            if (libNormalized === normalized && libName !== basename) {
+              results.push({
+                incomingPath: incoming,
+                duplicateType: 'similar',
+                matchedLibraryPath: libPaths[0],
+                details: `Similar filename: "${path.basename(incoming)}" ≈ "${path.basename(libPaths[0])}"`,
+              });
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            results.push({
+              incomingPath: incoming,
+              duplicateType: 'none',
+            });
+          }
+        }
+
+        const duplicates = results.filter((r) => r.duplicateType !== 'none');
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              totalChecked: incomingPaths.length,
+              librarySize: libraryFiles.length,
+              duplicatesFound: duplicates.length,
+              newFiles: results.filter((r) => r.duplicateType === 'none').length,
+              results,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error checking duplicates: ${message}` }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'stage_ingest',
+    'Stage files for ingest into the library. Moves files from incoming folder to library ' +
+    'using a folder template based on tags. All moves go through the overlay — nothing ' +
+    'is written until you commit. Creates a Plan for the ingest that can be exported/resumed.',
+    {
+      files: z.array(z.object({
+        sourcePath: z.string().describe('Current path of the file'),
+        destinationPath: z.string().optional().describe('Override destination path (if not using template)'),
+        tagsToWrite: z.record(z.string(), z.unknown()).optional().describe('Tags to write before moving'),
+        bpm: z.number().optional().describe('BPM to set in tags'),
+      })).describe('Files to ingest with optional overrides'),
+      libraryRoot: z.string().describe('Root directory of the music library'),
+      organizationTemplate: z.string().optional().default('{genre}/{artist}/{title}')
+        .describe('Template for library organization'),
+      planName: z.string().optional().default('Ingest').describe('Name for the ingest plan'),
+    },
+    async ({ files, libraryRoot, organizationTemplate, planName }) => {
+      try {
+        const plan = context.planManager.createPlan(
+          planName,
+          libraryRoot,
+          `Ingest of ${files.length} files into ${libraryRoot}`,
+        );
+
+        const staged: Array<{ source: string; destination: string; operations: string[] }> = [];
+
+        for (const file of files) {
+          const operations: string[] = [];
+
+          // Write tags if provided
+          if (file.tagsToWrite && Object.keys(file.tagsToWrite).length > 0) {
+            context.planManager.addOperation(plan.id, createWriteTagsOp(file.sourcePath, file.tagsToWrite));
+            operations.push(`write tags: ${Object.keys(file.tagsToWrite).join(', ')}`);
+          }
+
+          // Set BPM if provided
+          if (file.bpm !== undefined) {
+            context.planManager.addOperation(plan.id, createSetBpmOp(file.sourcePath, file.bpm));
+            operations.push(`set BPM: ${file.bpm}`);
+          }
+
+          // Determine destination
+          let dest = file.destinationPath;
+          if (!dest) {
+            // Read tags (possibly updated) to build path
+            let tags: TrackMetadata | null = null;
+            try {
+              tags = await readTags(file.sourcePath);
+            } catch {
+              // Use empty tags
+            }
+
+            // Merge with tags to write
+            const mergedTags: TrackMetadata = {
+              ...(tags ?? { format: 'unknown' }),
+              ...file.tagsToWrite as Partial<TrackMetadata>,
+            };
+            if (file.bpm !== undefined) mergedTags.bpm = file.bpm;
+
+            const ext = path.extname(file.sourcePath);
+            dest = buildLibraryPath(libraryRoot, mergedTags, organizationTemplate, ext);
+          }
+
+          // Stage the move in overlay
+          const destDir = path.dirname(dest);
+          await context.overlay.mkdir(destDir, { recursive: true });
+          await context.overlay.rename(file.sourcePath, dest);
+          context.planManager.addOperation(plan.id, createRenameOp(file.sourcePath, dest));
+          operations.push(`move to: ${dest}`);
+
+          staged.push({ source: file.sourcePath, destination: dest, operations });
+        }
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              planId: plan.id,
+              planName: plan.name,
+              totalFiles: files.length,
+              staged,
+              nextSteps: [
+                `Use view_plan with planId "${plan.id}" to review all operations`,
+                'Use get_pending_changes to see the overlay diff',
+                'Use commit_changes to apply all moves to disk',
+                `Use export_plan with planId "${plan.id}" to save the plan for later`,
+                'Use discard_changes to cancel everything',
+              ],
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error staging ingest: ${message}` }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'quick_ingest',
+    'One-shot ingest: scan a folder, read tags, check for duplicates against library, ' +
+    'and stage all non-duplicate files for organized import. Combines scan_incoming, ' +
+    'check_duplicates, and stage_ingest into a single call.',
+    {
+      incomingPath: z.string().describe('Folder with new music to ingest (e.g. ~/Downloads)'),
+      libraryPath: z.string().describe('Root of the organized music library'),
+      organizationTemplate: z.string().optional().default('{genre}/{artist}/{title}')
+        .describe('How to organize files in the library'),
+      skipDuplicates: z.boolean().optional().default(true)
+        .describe('Skip files that already exist in the library'),
+      recursive: z.boolean().optional().default(true)
+        .describe('Scan incoming folder recursively'),
+    },
+    async ({ incomingPath, libraryPath, organizationTemplate, skipDuplicates, recursive }) => {
+      try {
+        // 1. Scan incoming
+        const exts = [...SUPPORTED_FORMATS];
+        const pattern = `*{${exts.join(',')}}`;
+        const fullPattern = recursive
+          ? `${incomingPath}/**/${pattern}`
+          : `${incomingPath}/${pattern}`;
+
+        const incomingFiles = await fg(fullPattern, {
+          absolute: true,
+          onlyFiles: true,
+        });
+
+        if (incomingFiles.length === 0) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                message: 'No audio files found in incoming folder.',
+                incomingPath,
+              }, null, 2),
+            }],
+          };
+        }
+
+        // 2. Read tags for all incoming files
+        const trackData: Array<{ path: string; tags: TrackMetadata | null; issues: string[] }> = [];
+        for (const filePath of incomingFiles) {
+          let tags: TrackMetadata | null = null;
+          const issues: string[] = [];
+          try {
+            tags = await readTags(filePath);
+            if (!tags.title) issues.push('missing title');
+            if (!tags.artist) issues.push('missing artist');
+            if (!tags.genre) issues.push('missing genre');
+            if (!tags.bpm) issues.push('missing bpm');
+          } catch (err) {
+            issues.push(`unreadable tags: ${err instanceof Error ? err.message : String(err)}`);
+          }
+          trackData.push({ path: filePath, tags, issues });
+        }
+
+        // 3. Check for duplicates
+        let duplicatePaths = new Set<string>();
+        if (skipDuplicates) {
+          const libraryExts = [...SUPPORTED_FORMATS];
+          const libPattern = `*{${libraryExts.join(',')}}`;
+          const libraryFiles = await fg(`${libraryPath}/**/${libPattern}`, {
+            absolute: true,
+            onlyFiles: true,
+          });
+
+          // Build indexes
+          const filenameIndex = new Map<string, string>();
+          const tagIndex = new Map<string, string>();
+
+          for (const libFile of libraryFiles) {
+            filenameIndex.set(path.basename(libFile).toLowerCase(), libFile);
+            try {
+              const libTags = await readTags(libFile);
+              if (libTags.artist && libTags.title) {
+                tagIndex.set(`${libTags.artist.toLowerCase()}|${libTags.title.toLowerCase()}`, libFile);
+              }
+            } catch {
+              // skip
+            }
+          }
+
+          for (const track of trackData) {
+            const basename = path.basename(track.path).toLowerCase();
+            if (filenameIndex.has(basename)) {
+              duplicatePaths.add(track.path);
+              continue;
+            }
+            if (track.tags?.artist && track.tags?.title) {
+              const key = `${track.tags.artist.toLowerCase()}|${track.tags.title.toLowerCase()}`;
+              if (tagIndex.has(key)) {
+                duplicatePaths.add(track.path);
+              }
+            }
+          }
+        }
+
+        // 4. Stage non-duplicate files
+        const toIngest = trackData.filter((t) => !duplicatePaths.has(t.path));
+        const plan = context.planManager.createPlan(
+          `Ingest ${new Date().toISOString().slice(0, 10)}`,
+          libraryPath,
+          `Quick ingest from ${incomingPath}: ${toIngest.length} files`,
+        );
+
+        const staged: Array<{ source: string; destination: string; issues: string[] }> = [];
+
+        for (const track of toIngest) {
+          const ext = path.extname(track.path);
+          const tags = track.tags ?? { format: 'unknown' } as TrackMetadata;
+          const dest = buildLibraryPath(libraryPath, tags, organizationTemplate, ext);
+
+          const destDir = path.dirname(dest);
+          await context.overlay.mkdir(destDir, { recursive: true });
+          await context.overlay.rename(track.path, dest);
+          context.planManager.addOperation(plan.id, createRenameOp(track.path, dest));
+
+          staged.push({ source: track.path, destination: dest, issues: track.issues });
+        }
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              summary: {
+                scanned: incomingFiles.length,
+                duplicatesSkipped: duplicatePaths.size,
+                stagedForIngest: staged.length,
+                filesWithIssues: staged.filter((s) => s.issues.length > 0).length,
+              },
+              planId: plan.id,
+              planName: plan.name,
+              duplicates: [...duplicatePaths].map((p) => path.basename(p)),
+              staged,
+              nextSteps: [
+                `Review: view_plan planId="${plan.id}"`,
+                'Preview: get_pending_changes',
+                'Apply: commit_changes',
+                `Save for later: export_plan planId="${plan.id}"`,
+                'Cancel: discard_changes',
+              ],
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error in quick ingest: ${message}` }],
+        };
+      }
+    },
+  );
+}

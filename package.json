@@ -1,0 +1,39 @@
+{
+  "name": "musicsorter-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for organizing music with LLM assistance - built for DJs",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "musicsorter-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "better-sqlite3": "^11.8.1",
+    "fast-glob": "^3.3.3",
+    "memfs": "^4.17.0",
+    "music-metadata": "^10.7.1",
+    "nanoid": "^5.1.2",
+    "node-id3": "^0.2.6",
+    "unionfs": "^4.5.4",
+    "zod": "^3.25.11"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

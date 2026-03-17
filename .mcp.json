@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "musicsorter": {
+      "command": "npx",
+      "args": ["tsx", "/Users/albinekb/Devel/git/musicsorter/src/index.ts"]
+    }
+  }
+}
