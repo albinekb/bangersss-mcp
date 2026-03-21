@@ -26,7 +26,15 @@
       "mcp__supabase-admin__refresh_token",
       "Bash(find /Users/albinekb -path */node_modules -prune -o -name *supabase-admin* -type f)",
       "Bash(find ~/.claude -name *.ts -o -name *.js)",
-      "Bash(find /Users/albinekb -name *.ts -o -name *.tsx)"
+      "Bash(find /Users/albinekb -name *.ts -o -name *.tsx)",
+      "Bash(npm whoami:*)",
+      "Bash(npm view:*)",
+      "Bash(npm run:*)",
+      "Bash(npm publish:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)"
     ],
     "defaultMode": "bypassPermissions"
   },

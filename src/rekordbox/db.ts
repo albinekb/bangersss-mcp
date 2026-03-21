@@ -16,6 +16,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { createLogger } from '../util/logger.js';
 
 const log = createLogger('rekordbox');
@@ -38,10 +39,14 @@ export type { Playlist, PlaylistTrack } from 'rekordbox-connect';
 // Lazily resolved RekordboxDb constructor
 let _RekordboxDbClass: (new (dbPath: string, password: string, readonly?: boolean) => IRekordboxDb) | null = null;
 
+const require = createRequire(import.meta.url);
+
 async function getRekordboxDbClass() {
   if (_RekordboxDbClass) return _RekordboxDbClass;
-  // Dynamic import bypasses the exports map restriction in both tsc and vitest
-  const mod = await import(/* @vite-ignore */ 'rekordbox-connect/dist/db.js');
+  // Resolve the main entry then navigate to db.js in the same directory,
+  // bypassing the exports map which doesn't expose this subpath.
+  const mainPath = require.resolve('rekordbox-connect');
+  const mod = require(join(dirname(mainPath), 'db.js'));
   _RekordboxDbClass = mod.RekordboxDb;
   return _RekordboxDbClass!;
 }
