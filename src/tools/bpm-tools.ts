@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { analyzeBpm, batchAnalyzeBpm } from '../audio/bpm-analyzer.js';
+import { analyzeKey, batchAnalyzeKey } from '../audio/key-analyzer.js';
 import {
   getKeyInfo,
   toCamelot,
@@ -73,6 +74,75 @@ export function registerBpmTools(server: McpServer, _context: ServerContext): vo
         const message = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: 'text' as const, text: `Error in batch BPM analysis: ${message}` }],
+        };
+      }
+    },
+  );
+
+  // --- Key detection tools ---
+
+  server.tool(
+    'analyze_key',
+    'Detect the musical key of a single audio file using keyfinder-cli (libKeyFinder). Returns standard, Camelot, Open Key, and short notations.',
+    {
+      path: z.string().describe('Absolute path to the audio file'),
+    },
+    async ({ path: filePath }) => {
+      try {
+        const result = await analyzeKey(filePath);
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              path: filePath,
+              key: result.key,
+              raw: result.raw,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error analyzing key for ${filePath}: ${message}` }],
+        };
+      }
+    },
+  );
+
+  server.tool(
+    'batch_analyze_key',
+    'Detect musical keys for multiple audio files with configurable concurrency. Uses keyfinder-cli (libKeyFinder).',
+    {
+      paths: z.array(z.string()).describe('Array of absolute paths to audio files'),
+      concurrency: z.number().optional().default(4).describe('Maximum number of parallel analyses (default 4)'),
+    },
+    async ({ paths, concurrency }) => {
+      try {
+        const results = await batchAnalyzeKey(paths, concurrency);
+        const output: Record<string, { key: ReturnType<typeof getKeyInfo>; raw: string }> = {};
+        for (const [fp, result] of results) {
+          output[fp] = { key: result.key, raw: result.raw };
+        }
+
+        const detected = Object.values(output).filter((r) => r.key !== null).length;
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              totalFiles: paths.length,
+              analyzed: results.size,
+              detected,
+              undetected: results.size - detected,
+              concurrency,
+              results: output,
+            }, null, 2),
+          }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: `Error in batch key analysis: ${message}` }],
         };
       }
     },
