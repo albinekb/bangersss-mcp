@@ -7,7 +7,7 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   error: 3,
 };
 
-let currentLevel: LogLevel = (process.env.CRATEDIGGER_LOG_LEVEL as LogLevel) ?? 'info';
+let currentLevel: LogLevel = (process.env.BANGERSSS_LOG_LEVEL as LogLevel) ?? 'info';
 
 export function setLogLevel(level: LogLevel): void {
   currentLevel = level;

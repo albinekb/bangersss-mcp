@@ -1,4 +1,4 @@
-# cratedigger
+# bangersss-mcp
 
 An MCP (Model Context Protocol) server for organizing music libraries with LLM assistance. Built for DJs — supports Rekordbox, Engine DJ, BPM analysis, ID3 tags, playlists, and safe dry-mode operation.
 
@@ -33,14 +33,21 @@ An MCP (Model Context Protocol) server for organizing music libraries with LLM a
 ## Installation
 
 ```sh
-# Clone the repo
-git clone https://github.com/albinekb/cratedigger.git
-cd cratedigger
+npm install -g bangersss-mcp
+```
 
-# Install dependencies
+Or use directly with `npx` — no install needed:
+
+```sh
+npx -y bangersss-mcp
+```
+
+### From source
+
+```sh
+git clone https://github.com/albinekb/bangersss-mcp.git
+cd bangersss-mcp
 npm install
-
-# Build
 npm run build
 ```
 
@@ -51,22 +58,21 @@ Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.cla
 ```json
 {
   "mcpServers": {
-    "cratedigger": {
-      "command": "node",
-      "args": ["/path/to/cratedigger/dist/index.js"]
+    "bangersss-mcp": {
+      "command": "npx",
+      "args": ["-y", "bangersss-mcp"]
     }
   }
 }
 ```
 
-Or for development:
+Or if installed globally / from source:
 
 ```json
 {
   "mcpServers": {
-    "cratedigger": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/cratedigger/src/index.ts"]
+    "bangersss-mcp": {
+      "command": "bangersss-mcp"
     }
   }
 }
@@ -79,9 +85,9 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "cratedigger": {
-      "command": "node",
-      "args": ["/path/to/cratedigger/dist/index.js"]
+    "bangersss-mcp": {
+      "command": "npx",
+      "args": ["-y", "bangersss-mcp"]
     }
   }
 }
@@ -162,7 +168,7 @@ The main workflow — point at a downloads folder, ingest into your library.
 | `add_to_plan` | Add an operation to a plan |
 | `view_plan` | Inspect a plan's operations and status |
 | `execute_plan` | Execute all pending operations |
-| `export_plan` | Save plan to a `.cratedigger-plan.json` file |
+| `export_plan` | Save plan to a `.bangersss-mcp-plan.json` file |
 | `import_plan` | Load a plan from file |
 | `resume_plan` | Continue a partially-completed plan |
 | `list_plans` | List all plans |
@@ -306,13 +312,13 @@ Claude: [calls commit_selective with filtered paths]
 Plans are portable, resumable operation sequences. Use them to:
 
 - **Review before executing** — Create a plan, export it, review the JSON
-- **Share** — Send a `.cratedigger-plan.json` to another DJ
+- **Share** — Send a `.bangersss-mcp-plan.json` to another DJ
 - **Resume** — If execution is interrupted, import the plan and resume from where it left off
 - **Reuse** — Import a plan template and apply it to a different folder
 
 ### Plan format
 
-Plans are stored as JSON with a `.cratedigger-plan.json` extension:
+Plans are stored as JSON with a `.bangersss-mcp-plan.json` extension:
 
 ```json
 {

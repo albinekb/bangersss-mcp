@@ -10,7 +10,7 @@ async function main() {
   const { server } = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log.info('cratedigger MCP server running on stdio');
+  log.info('bangersss-mcp server running on stdio');
 }
 
 main().catch((error) => {

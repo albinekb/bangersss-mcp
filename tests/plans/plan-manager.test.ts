@@ -67,7 +67,7 @@ describe('PlanManager', () => {
       const plan = manager.createPlan('Export Test', '/music');
       manager.addOperation(plan.id, createSetBpmOp('/track.mp3', 140));
 
-      const exportPath = path.join(testDir, 'test.cratedigger-plan.json');
+      const exportPath = path.join(testDir, 'test.bangersss-mcp-plan.json');
       await fs.mkdir(testDir, { recursive: true });
       await manager.exportPlan(plan.id, exportPath);
 

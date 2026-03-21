@@ -1,20 +1,43 @@
 {
-  "name": "cratedigger",
+  "name": "bangersss-mcp",
   "version": "0.1.0",
   "description": "MCP server for organizing music with LLM assistance - built for DJs",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "cratedigger": "dist/index.js"
+    "bangersss-mcp": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albinekb/bangersss-mcp.git"
+  },
+  "homepage": "https://github.com/albinekb/bangersss-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/albinekb/bangersss-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "music",
+    "dj",
+    "rekordbox",
+    "engine-dj",
+    "bpm",
+    "id3",
+    "playlist",
+    "model-context-protocol"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

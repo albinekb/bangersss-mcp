@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CrateDigger — AI-powered music library management for DJs</title>
+  <title>Bangersss — AI-powered music library management for DJs</title>
   <meta name="description" content="AI-powered music library organization for DJs. Safe, smart, and reversible. Supports Rekordbox, Engine DJ, BPM analysis, and more.">
-  <meta property="og:title" content="CrateDigger">
+  <meta property="og:title" content="Bangersss">
   <meta property="og:description" content="AI-powered music library organization for DJs — safe, smart, and reversible.">
   <meta property="og:type" content="website">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
@@ -613,13 +613,13 @@
 <!-- Nav -->
 <nav>
   <div class="inner">
-    <a href="#" class="logo">cratedigger</a>
+    <a href="#" class="logo">bangersss-mcp</a>
     <div class="links">
       <a href="#features">Features</a>
       <a href="#how-it-works">How it works</a>
       <a href="#tools">Tools</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/albinekb/musicsorter" class="gh">
+      <a href="https://github.com/albinekb/bangersss-mcp" class="gh">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -645,7 +645,7 @@
         <circle cx="40" cy="26" r="6" stroke="#e5a800" stroke-width="1" opacity="0.3" fill="none"/>
         <circle cx="40" cy="26" r="2.5" fill="#e5a800" opacity="0.6"/>
       </svg>
-      <h1>cratedigger</h1>
+      <h1>bangersss-mcp</h1>
     </div>
     <p class="tagline">AI-powered music library organization for DJs &mdash; safe, smart, and reversible.</p>
 
@@ -682,7 +682,7 @@
 
     <div class="command-bar">
       <span class="prompt">$</span>
-      <span class="cmd">cratedigger</span>
+      <span class="cmd">bangersss-mcp</span>
       <span class="args">ingest ~/Downloads/Music</span>
       <span class="arrow">&rarr;</span>
       <span class="args">~/Music/DJ Library</span>
@@ -866,12 +866,12 @@
 <section class="content" id="how-it-works">
   <div class="section-label">How it works</div>
   <h2>Natural language, real results</h2>
-  <p class="subtitle">CrateDigger is an MCP server &mdash; it connects to AI assistants like Claude, giving them 60+ tools to manage your music library.</p>
+  <p class="subtitle">Bangersss is an MCP server &mdash; it connects to AI assistants like Claude, giving them 60+ tools to manage your music library.</p>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <h3>Connect</h3>
-      <p>Add CrateDigger to your Claude Code or Claude Desktop MCP config. One line of JSON.</p>
+      <p>Add Bangersss to your Claude Code or Claude Desktop MCP config. One line of JSON.</p>
     </div>
     <div class="step">
       <div class="step-num">2</div>
@@ -1005,7 +1005,7 @@
 <section class="content" id="install">
   <div class="section-label">Get started</div>
   <h2>Up and running in minutes</h2>
-  <p class="subtitle">Clone, build, and connect to your AI assistant.</p>
+  <p class="subtitle">One command to install. One line of JSON to connect.</p>
 
   <div class="install-block">
     <div class="tab-bar">
@@ -1013,35 +1013,25 @@
       <button class="tab" data-tab="claude-desktop">Claude Desktop</button>
     </div>
     <div class="install-panel active" id="claude-code">
-      <pre><span class="comment"># Install</span>
-git clone https://github.com/albinekb/musicsorter.git cratedigger
-cd cratedigger
-npm install && npm run build
-
-<span class="comment"># Add to Claude Code MCP settings</span>
+      <pre><span class="comment"># Add to Claude Code MCP settings</span>
 <span class="comment"># ~/.claude/settings.json</span>
 {
   <span class="string">"mcpServers"</span>: {
-    <span class="string">"cratedigger"</span>: {
-      <span class="string">"command"</span>: <span class="string">"node"</span>,
-      <span class="string">"args"</span>: [<span class="string">"/path/to/cratedigger/dist/index.js"</span>]
+    <span class="string">"bangersss-mcp"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"bangersss-mcp"</span>]
     }
   }
 }</pre>
     </div>
     <div class="install-panel" id="claude-desktop">
-      <pre><span class="comment"># Install</span>
-git clone https://github.com/albinekb/musicsorter.git cratedigger
-cd cratedigger
-npm install && npm run build
-
-<span class="comment"># Add to Claude Desktop config</span>
+      <pre><span class="comment"># Add to Claude Desktop config</span>
 <span class="comment"># ~/Library/Application Support/Claude/claude_desktop_config.json</span>
 {
   <span class="string">"mcpServers"</span>: {
-    <span class="string">"cratedigger"</span>: {
-      <span class="string">"command"</span>: <span class="string">"node"</span>,
-      <span class="string">"args"</span>: [<span class="string">"/path/to/cratedigger/dist/index.js"</span>]
+    <span class="string">"bangersss-mcp"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"bangersss-mcp"</span>]
     }
   }
 }</pre>
@@ -1071,11 +1061,11 @@ npm install && npm run build
 
 <!-- Footer -->
 <footer>
-  <p>CrateDigger is open source under the MIT license.</p>
+  <p>Bangersss is open source under the MIT license.</p>
   <p style="margin-top: 0.5rem;">
-    <a href="https://github.com/albinekb/musicsorter">GitHub</a>
+    <a href="https://github.com/albinekb/bangersss-mcp">GitHub</a>
     &middot;
-    <a href="https://github.com/albinekb/musicsorter/issues">Issues</a>
+    <a href="https://github.com/albinekb/bangersss-mcp/issues">Issues</a>
     &middot;
     <a href="https://modelcontextprotocol.io">Model Context Protocol</a>
   </p>

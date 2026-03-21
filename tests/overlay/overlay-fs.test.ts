@@ -27,7 +27,7 @@ describe('OverlayFS', () => {
     // package.json exists on real fs
     const realFile = path.resolve(process.cwd(), 'package.json');
     const content = await overlay.readFile(realFile, 'utf-8');
-    expect(content).toContain('cratedigger');
+    expect(content).toContain('bangersss-mcp');
   });
 
   it('overlay overrides real fs reads', async () => {

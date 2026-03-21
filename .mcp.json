@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "cratedigger": {
+    "bangersss-mcp": {
       "command": "npx",
       "args": ["tsx", "src/index.ts"]
     }

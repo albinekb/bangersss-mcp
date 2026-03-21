@@ -1,4 +1,4 @@
-# cratedigger
+# bangersss-mcp
 
 ## What this is
 
