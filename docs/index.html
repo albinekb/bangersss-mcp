@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrateDigger — AI-powered music library management for DJs</title>
+  <meta name="description" content="An MCP server for organizing music libraries with LLM assistance. Built for DJs — supports Rekordbox, Engine DJ, BPM analysis, ID3 tags, playlists, and safe dry-mode operation.">
+  <meta property="og:title" content="CrateDigger">
+  <meta property="og:description" content="AI-powered music library management for DJs. Rekordbox, Engine DJ, BPM analysis, and more.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-card-hover: #1a1a25;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --text-muted: #8888a0;
+      --accent: #a78bfa;
+      --accent-dim: #7c5cbf;
+      --accent-glow: rgba(167, 139, 250, 0.15);
+      --green: #34d399;
+      --blue: #60a5fa;
+      --orange: #fb923c;
+      --pink: #f472b6;
+      --cyan: #22d3ee;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ---- Nav ---- */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav .logo {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    nav .links { display: flex; gap: 1.5rem; align-items: center; }
+    nav .links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    nav .links a:hover { color: var(--text); }
+    nav .links .gh {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    nav .links .gh:hover { border-color: var(--accent-dim); }
+
+    /* ---- Hero ---- */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 1.5rem 4rem;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+    .hero .badge .dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: clamp(1.05rem, 2.5vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 620px;
+      margin-bottom: 2.5rem;
+    }
+    .hero .cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0f;
+    }
+    .btn-primary:hover { background: #b89cff; }
+    .btn-secondary {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { border-color: var(--accent-dim); background: var(--bg-card-hover); }
+
+    /* ---- Terminal demo ---- */
+    .terminal {
+      margin-top: 3.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 680px;
+      width: 100%;
+      text-align: left;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+    }
+    .terminal-bar {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .terminal-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .terminal-dot:nth-child(1) { background: #ff5f57; }
+    .terminal-dot:nth-child(2) { background: #febc2e; }
+    .terminal-dot:nth-child(3) { background: #28c840; }
+    .terminal-bar span {
+      flex: 1;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .terminal pre {
+      padding: 1.25rem;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .terminal .prompt { color: var(--accent); }
+    .terminal .comment { color: var(--text-muted); }
+    .terminal .string { color: var(--green); }
+    .terminal .output { color: var(--text-muted); }
+    .terminal .highlight { color: var(--orange); }
+
+    /* ---- Sections ---- */
+    section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem;
+    }
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    section h2 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    section .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+
+    /* ---- Feature grid ---- */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .feature:hover {
+      border-color: var(--accent-dim);
+      background: var(--bg-card-hover);
+    }
+    .feature .icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .feature h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .feature p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .icon-purple { background: rgba(167,139,250,0.12); }
+    .icon-green { background: rgba(52,211,153,0.12); }
+    .icon-blue { background: rgba(96,165,250,0.12); }
+    .icon-orange { background: rgba(251,146,60,0.12); }
+    .icon-pink { background: rgba(244,114,182,0.12); }
+    .icon-cyan { background: rgba(34,211,238,0.12); }
+
+    /* ---- How it works ---- */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.25rem;
+      counter-reset: step;
+    }
+    .step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .step h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .step p { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ---- Tool categories ---- */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+    .tool-cat {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .tool-cat h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tool-cat .count {
+      font-size: 0.7rem;
+      background: var(--accent-glow);
+      color: var(--accent);
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .tool-cat ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tool-cat li {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      padding: 0.2rem 0.6rem;
+      border-radius: 5px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    /* ---- Install section ---- */
+    .install-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 680px;
+    }
+    .install-block .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .install-block .tab {
+      padding: 0.65rem 1.25rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .install-block .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .install-block .tab:hover { color: var(--text); }
+    .install-panel {
+      display: none;
+      padding: 1.25rem;
+    }
+    .install-panel.active { display: block; }
+    .install-panel pre {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .install-panel .comment { color: var(--text-muted); }
+    .install-panel .string { color: var(--green); }
+
+    /* ---- Formats ---- */
+    .formats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    .format-tag {
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 640px) {
+      nav .links a:not(.gh) { display: none; }
+      .features, .steps, .tools-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <a href="#" class="logo">CrateDigger</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#tools">Tools</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/albinekb/musicsorter" class="gh">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="badge">
+    <span class="dot"></span>
+    MCP Server &middot; Open Source
+  </div>
+  <h1>CrateDigger</h1>
+  <p>AI-powered music library management for DJs. Organize, tag, analyze, and sync your collection with natural language&nbsp;&mdash;&nbsp;powered by&nbsp;MCP.</p>
+  <div class="cta">
+    <a href="#install" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/albinekb/musicsorter" class="btn btn-secondary">View on GitHub</a>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <span>Claude Code</span>
+    </div>
+    <pre><span class="prompt">you:</span> Ingest everything in ~/Downloads/music into my library,
+     organize by genre and artist
+
+<span class="prompt">claude:</span> <span class="comment"># Scanned 23 files, found 2 duplicates</span>
+  <span class="string">21 files staged for import</span>
+  <span class="highlight">4 files have missing tags</span> — want me to fix them?
+
+<span class="prompt">you:</span> Yes, fix the tags and show me what will change
+
+<span class="prompt">claude:</span> <span class="comment"># Tags updated, here's the plan:</span>
+  Downloads/track1.mp3 → <span class="string">DJ Library/House/DJ Snake/Turn Down.mp3</span>
+  Downloads/track2.flac → <span class="string">DJ Library/Techno/Charlotte de Witte/Overdrive.flac</span>
+  <span class="output">… 19 more files</span>
+
+<span class="prompt">you:</span> Looks good, commit it
+
+<span class="prompt">claude:</span> <span class="string">✓ 21 files moved to library</span></pre>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-label">Features</div>
+  <h2>Everything a DJ needs</h2>
+  <p class="subtitle">Built for real DJ workflows. Safe by default with dry-mode operation — nothing touches your files until you say so.</p>
+
+  <div class="features">
+    <div class="feature">
+      <div class="icon icon-purple">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="var(--accent)"/></svg>
+      </div>
+      <h3>Dry Mode</h3>
+      <p>All operations go through an in-memory overlay filesystem. Preview changes, discard, or selectively commit — like git for your music library.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-green">
+        <svg width="20" height="20" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <h3>Exportable Plans</h3>
+      <p>Create portable operation plans. Export as JSON, review, share with other DJs, or resume later. Organize 10,000 tracks with confidence.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-orange">
+        <svg width="20" height="20" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <h3>BPM Analysis</h3>
+      <p>Detect BPM from audio files using ffmpeg and autocorrelation analysis. Batch process your entire collection.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-blue">
+        <svg width="20" height="20" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7V4a2 2 0 012-2h8.5L20 7.5V20a2 2 0 01-2 2H6a2 2 0 01-2-2v-3"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h10"/><path d="M9 12l3 3-3 3"/></svg>
+      </div>
+      <h3>ID3 Tag Management</h3>
+      <p>Read and write metadata tags on MP3, FLAC, WAV, AIFF, M4A, OGG. Auto-suggest missing fields.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-pink">
+        <svg width="20" height="20" fill="none" stroke="var(--pink)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--pink)" stroke="none"/></svg>
+      </div>
+      <h3>Rekordbox Integration</h3>
+      <p>Read and write to Rekordbox's encrypted database. Search tracks, manage playlists, read cue points and hot cues.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-cyan">
+        <svg width="20" height="20" fill="none" stroke="var(--cyan)" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <h3>Engine DJ Integration</h3>
+      <p>Connect to Engine DJ databases on USB drives or SD cards. Search tracks, manage crates, view library stats.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-green">
+        <svg width="20" height="20" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <h3>Key & Harmonic Mixing</h3>
+      <p>Camelot wheel, Open Key, and standard notation. Check key compatibility and find harmonic neighbors for perfect mixes.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-purple">
+        <svg width="20" height="20" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      </div>
+      <h3>Smart File Organization</h3>
+      <p>Organize files into folders using tag-based templates. <code>{genre}/{artist}/{title}</code>, <code>{camelot}/{bpm}/{artist}</code>, or any pattern you want.</p>
+    </div>
+    <div class="feature">
+      <div class="icon icon-orange">
+        <svg width="20" height="20" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+      <h3>Playlist Management</h3>
+      <p>Create, edit, and export M3U/M3U8 playlists. Add and remove tracks, list all managed playlists.</p>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how-it-works">
+  <div class="section-label">How it works</div>
+  <h2>Natural language, real results</h2>
+  <p class="subtitle">CrateDigger is an MCP server — it connects to AI assistants like Claude Code and Claude Desktop, giving them tools to manage your music.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h3>Connect</h3>
+      <p>Add CrateDigger to your Claude Code or Claude Desktop MCP config. One line of JSON.</p>
+    </div>
+    <div class="step">
+      <h3>Describe</h3>
+      <p>Tell Claude what you want in plain English. "Organize my downloads by genre" or "Find all tracks between 124-128 BPM."</p>
+    </div>
+    <div class="step">
+      <h3>Preview</h3>
+      <p>Every change goes to dry mode first. Review the proposed moves, renames, and tag edits before anything happens.</p>
+    </div>
+    <div class="step">
+      <h3>Commit</h3>
+      <p>Approve the changes. Files get moved, tags get written, playlists get updated — all at once, or selectively.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Tools -->
+<section id="tools">
+  <div class="section-label">60+ tools</div>
+  <h2>Batteries included</h2>
+  <p class="subtitle">Comprehensive tooling for every part of the DJ library workflow.</p>
+
+  <div class="tools-grid">
+    <div class="tool-cat">
+      <h3>Ingest & Scanning <span class="count">7</span></h3>
+      <ul>
+        <li>quick_ingest</li>
+        <li>scan_incoming</li>
+        <li>analyze_incoming</li>
+        <li>check_duplicates</li>
+        <li>stage_ingest</li>
+        <li>scan_directory</li>
+        <li>list_audio_files</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Tags & Analysis <span class="count">6</span></h3>
+      <ul>
+        <li>read_tags</li>
+        <li>batch_read_tags</li>
+        <li>write_tags</li>
+        <li>suggest_tags</li>
+        <li>analyze_bpm</li>
+        <li>batch_analyze_bpm</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Key & Harmony <span class="count">5</span></h3>
+      <ul>
+        <li>get_key_info</li>
+        <li>convert_key</li>
+        <li>get_compatible_keys</li>
+        <li>check_key_compatibility</li>
+        <li>list_all_keys</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>File Operations <span class="count">4</span></h3>
+      <ul>
+        <li>rename_file</li>
+        <li>move_file</li>
+        <li>batch_rename</li>
+        <li>organize_files</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Playlists <span class="count">6</span></h3>
+      <ul>
+        <li>create_playlist</li>
+        <li>add_to_playlist</li>
+        <li>remove_from_playlist</li>
+        <li>read_playlist</li>
+        <li>list_playlists</li>
+        <li>export_playlist</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Plans <span class="count">8</span></h3>
+      <ul>
+        <li>create_plan</li>
+        <li>add_to_plan</li>
+        <li>view_plan</li>
+        <li>execute_plan</li>
+        <li>export_plan</li>
+        <li>import_plan</li>
+        <li>resume_plan</li>
+        <li>list_plans</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Dry Mode <span class="count">5</span></h3>
+      <ul>
+        <li>get_pending_changes</li>
+        <li>preview_change</li>
+        <li>commit_changes</li>
+        <li>discard_changes</li>
+        <li>commit_selective</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Rekordbox <span class="count">8</span></h3>
+      <ul>
+        <li>rb_connect</li>
+        <li>rb_search_tracks</li>
+        <li>rb_list_playlists</li>
+        <li>rb_get_playlist_tracks</li>
+        <li>rb_add_to_playlist</li>
+        <li>rb_create_playlist</li>
+        <li>rb_get_cue_points</li>
+        <li>rb_library_stats</li>
+      </ul>
+    </div>
+    <div class="tool-cat">
+      <h3>Engine DJ <span class="count">7</span></h3>
+      <ul>
+        <li>edj_connect</li>
+        <li>edj_search_tracks</li>
+        <li>edj_list_crates</li>
+        <li>edj_get_crate_tracks</li>
+        <li>edj_add_to_crate</li>
+        <li>edj_create_crate</li>
+        <li>edj_library_stats</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <div class="section-label">Get started</div>
+  <h2>Up and running in minutes</h2>
+  <p class="subtitle">Clone, build, and connect to your AI assistant.</p>
+
+  <div class="install-block">
+    <div class="tab-bar">
+      <button class="tab active" data-tab="claude-code">Claude Code</button>
+      <button class="tab" data-tab="claude-desktop">Claude Desktop</button>
+    </div>
+    <div class="install-panel active" id="claude-code">
+      <pre><span class="comment"># Install</span>
+git clone https://github.com/albinekb/musicsorter.git cratedigger
+cd cratedigger
+npm install && npm run build
+
+<span class="comment"># Add to Claude Code MCP settings</span>
+<span class="comment"># ~/.claude/settings.json</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"cratedigger"</span>: {
+      <span class="string">"command"</span>: <span class="string">"node"</span>,
+      <span class="string">"args"</span>: [<span class="string">"/path/to/cratedigger/dist/index.js"</span>]
+    }
+  }
+}</pre>
+    </div>
+    <div class="install-panel" id="claude-desktop">
+      <pre><span class="comment"># Install</span>
+git clone https://github.com/albinekb/musicsorter.git cratedigger
+cd cratedigger
+npm install && npm run build
+
+<span class="comment"># Add to Claude Desktop config</span>
+<span class="comment"># ~/Library/Application Support/Claude/claude_desktop_config.json</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"cratedigger"</span>: {
+      <span class="string">"command"</span>: <span class="string">"node"</span>,
+      <span class="string">"args"</span>: [<span class="string">"/path/to/cratedigger/dist/index.js"</span>]
+    }
+  }
+}</pre>
+    </div>
+  </div>
+
+  <div style="margin-top: 2.5rem;">
+    <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Supported formats</h3>
+    <div class="formats">
+      <span class="format-tag">MP3</span>
+      <span class="format-tag">FLAC</span>
+      <span class="format-tag">WAV</span>
+      <span class="format-tag">AIFF</span>
+      <span class="format-tag">M4A</span>
+      <span class="format-tag">OGG</span>
+      <span class="format-tag">WMA</span>
+      <span class="format-tag">AAC</span>
+      <span class="format-tag">ALAC</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 2.5rem;">
+    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Prerequisites</h3>
+    <p style="font-size: 0.875rem; color: var(--text-muted);">Node.js &ge; 20 &middot; ffmpeg (for BPM analysis) &middot; Rekordbox or Engine DJ (optional)</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>CrateDigger is open source under the MIT license.</p>
+  <p style="margin-top: 0.5rem;">
+    <a href="https://github.com/albinekb/musicsorter">GitHub</a>
+    &middot;
+    <a href="https://github.com/albinekb/musicsorter/issues">Issues</a>
+    &middot;
+    <a href="https://modelcontextprotocol.io">Model Context Protocol</a>
+  </p>
+</footer>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.install-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
