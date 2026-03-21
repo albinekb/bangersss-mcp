@@ -269,12 +269,12 @@
 <section class="content" id="how-it-works">
   <div class="section-label">How it works</div>
   <h2>Natural language, real results</h2>
-  <p class="subtitle">Bangersss is an MCP server &mdash; it connects to AI assistants like Claude, giving them 60+ tools to manage your music library.</p>
+  <p class="subtitle">Bangersss is an MCP server &mdash; it connects to AI assistants like Claude, Copilot, Cursor, and Windsurf, giving them 60+ tools to manage your music library.</p>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <h3>Connect</h3>
-      <p>Add Bangersss to your Claude Code or Claude Desktop MCP config. One line of JSON.</p>
+      <p>Add Bangersss to your MCP config &mdash; Claude Code, Copilot, Cursor, or Windsurf. One line of JSON.</p>
     </div>
     <div class="step">
       <div class="step-num">2</div>
@@ -416,10 +416,13 @@
     <div class="tab-bar">
       <button class="tab active" data-tab="claude-code">Claude Code</button>
       <button class="tab" data-tab="claude-desktop">Claude Desktop</button>
+      <button class="tab" data-tab="vscode">VS Code / Copilot</button>
+      <button class="tab" data-tab="cursor">Cursor</button>
+      <button class="tab" data-tab="windsurf">Windsurf</button>
     </div>
     <div class="install-panel active" id="claude-code">
       <pre><span class="comment"># Add to Claude Code MCP settings</span>
-<span class="comment"># ~/.claude/settings.json</span>
+<span class="comment"># ~/.claude/settings.json or .claude/settings.json</span>
 {
   <span class="string">"mcpServers"</span>: {
     <span class="string">"bangersss-mcp"</span>: {
@@ -432,6 +435,40 @@
     <div class="install-panel" id="claude-desktop">
       <pre><span class="comment"># Add to Claude Desktop config</span>
 <span class="comment"># ~/Library/Application Support/Claude/claude_desktop_config.json</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"bangersss-mcp"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"bangersss-mcp"</span>]
+    }
+  }
+}</pre>
+    </div>
+    <div class="install-panel" id="vscode">
+      <pre><span class="comment"># Add to .vscode/mcp.json in your project</span>
+<span class="comment"># Requires VS Code 1.99+</span>
+{
+  <span class="string">"servers"</span>: {
+    <span class="string">"bangersss-mcp"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"bangersss-mcp"</span>]
+    }
+  }
+}</pre>
+    </div>
+    <div class="install-panel" id="cursor">
+      <pre><span class="comment"># Add to .cursor/mcp.json (project) or ~/.cursor/mcp.json (global)</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"bangersss-mcp"</span>: {
+      <span class="string">"command"</span>: <span class="string">"npx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"-y"</span>, <span class="string">"bangersss-mcp"</span>]
+    }
+  }
+}</pre>
+    </div>
+    <div class="install-panel" id="windsurf">
+      <pre><span class="comment"># Add to ~/.codeium/windsurf/mcp_config.json</span>
 {
   <span class="string">"mcpServers"</span>: {
     <span class="string">"bangersss-mcp"</span>: {

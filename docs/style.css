@@ -525,11 +525,12 @@ section.content .subtitle {
 }
 .tab-bar {
   display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--border);
 }
 .tab {
-  padding: 0.65rem 1.25rem;
-  font-size: 0.82rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
@@ -538,6 +539,7 @@ section.content .subtitle {
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
   font-family: inherit;
+  white-space: nowrap;
 }
 .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
 .tab:hover { color: var(--text); }
