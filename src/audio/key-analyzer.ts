@@ -8,7 +8,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { access, constants } from 'node:fs/promises';
-import { normalizeKey, getKeyInfo, type KeyInfo } from './keys.js';
+import { getKeyInfo, type KeyInfo } from './keys.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -28,10 +28,31 @@ async function assertKeyfinderAvailable(): Promise<void> {
   } catch (err: unknown) {
     // keyfinder-cli prints usage to stderr and exits 1 when called with no args,
     // but that still means it's installed. Only fail if it's not found at all.
-    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+    const isNotFound =
+      err instanceof Error &&
+      'code' in err &&
+      (err as NodeJS.ErrnoException).code === 'ENOENT';
+
+    const isDylibError =
+      err instanceof Error &&
+      err.message.includes('Library not loaded');
+
+    if (isNotFound) {
       throw new Error(
-        'keyfinder-cli is not installed or not found in PATH. ' +
-          'Install it with: brew install evanpurkhiser/personal/keyfinder-cli',
+        'keyfinder-cli is not installed or not found in PATH.\n\n' +
+          'Install it:\n' +
+          '  macOS:  brew install evanpurkhiser/personal/keyfinder-cli\n' +
+          '  Linux:  build from source — https://github.com/evanpurkhiser/keyfinder-cli\n\n' +
+          'See: https://github.com/evanpurkhiser/keyfinder-cli#building',
+      );
+    }
+
+    if (isDylibError) {
+      throw new Error(
+        'keyfinder-cli is installed but has broken library links (likely an ffmpeg upgrade).\n\n' +
+          'Fix it by rebuilding:\n' +
+          '  brew upgrade evanpurkhiser/personal/keyfinder-cli\n\n' +
+          'See: https://github.com/evanpurkhiser/keyfinder-cli',
       );
     }
   }
