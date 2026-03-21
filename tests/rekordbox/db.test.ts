@@ -1,17 +1,20 @@
 import { describe, it, expect, afterAll } from 'vitest';
+import { existsSync } from 'node:fs';
 import { findRekordboxDb, DEFAULT_REKORDBOX_DB_PATH, openRekordboxDb, closeRekordboxDb } from '../../src/rekordbox/db.js';
 import Database from 'better-sqlite3-multiple-ciphers';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
 
+const hasRealDb = existsSync(DEFAULT_REKORDBOX_DB_PATH);
+
 describe('Rekordbox DB', () => {
-  it('findRekordboxDb detects the real DB on this machine', () => {
+  it.skipIf(!hasRealDb)('findRekordboxDb detects the real DB on this machine', () => {
     const dbPath = findRekordboxDb();
     expect(dbPath).toBe(DEFAULT_REKORDBOX_DB_PATH);
   });
 
-  it('openRekordboxDb auto-detects and opens with decryption', async () => {
+  it.skipIf(!hasRealDb)('openRekordboxDb auto-detects and opens with decryption', async () => {
     let db;
     try {
       db = await openRekordboxDb();
