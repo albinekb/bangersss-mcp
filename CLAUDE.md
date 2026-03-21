@@ -42,7 +42,7 @@ npm run test:watch # Watch mode tests
 - `src/server.ts` — creates McpServer, registers all tools, holds ServerContext
 - `src/overlay/` — OverlayFS class (memfs over real fs), FileTracker, commit logic
 - `src/plans/` — Plan types (Zod schemas), PlanManager, operation factories
-- `src/audio/` — BPM analysis, audio decoding (requires ffmpeg)
+- `src/audio/` — BPM analysis, key detection (keyfinder-cli), audio decoding (requires ffmpeg)
 - `src/tags/` — Tag reader (music-metadata) and writer (node-id3)
 - `src/playlists/` — M3U parser/generator, PlaylistManager
 - `src/rekordbox/` — Rekordbox DB (SQLCipher4), schema types, track/playlist/cue queries

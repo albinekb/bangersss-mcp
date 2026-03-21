@@ -1,12 +1,17 @@
 # bangersss-mcp
 
-An MCP (Model Context Protocol) server for organizing music libraries with LLM assistance. Built for DJs — supports Rekordbox, Engine DJ, BPM analysis, ID3 tags, playlists, and safe dry-mode operation.
+**[albinekb.github.io/bangersss-mcp](https://albinekb.github.io/bangersss-mcp/)**
+
+An MCP (Model Context Protocol) server for organizing music libraries with LLM assistance. Built for DJs — supports Rekordbox, Engine DJ, BPM analysis, key detection, ID3 tags, playlists, and safe dry-mode operation.
+
+Point it at your downloads folder, and your AI assistant will scan, tag, deduplicate, detect BPM and key, and organize tracks into your library — all through a safe dry-mode overlay that doesn't touch your files until you say "commit".
 
 ## Features
 
 - **Dry Mode** — All file operations go through an in-memory overlay filesystem. Nothing touches your real files until you explicitly commit. Think `git add` + `git commit` for your music library.
 - **Plans** — Create, export, import, and resume operation plans. Organize 10,000 tracks? Export the plan, review it, share it, resume it later.
 - **BPM Analysis** — Detect BPM from audio files using ffmpeg + autocorrelation analysis.
+- **Key Detection** — Detect musical keys using [keyfinder-cli](https://github.com/evanpurkhiser/keyfinder-cli) (libKeyFinder). Returns standard, Camelot, and Open Key notations.
 - **ID3 Tag Management** — Read and write ID3/metadata tags on MP3, FLAC, WAV, AIFF, M4A, OGG files.
 - **Playlist Management** — Create, edit, and export M3U/M3U8 playlists.
 - **Rekordbox Integration** — Read/write to Rekordbox's database: search tracks, manage playlists, read cue points and hot cues.
@@ -27,6 +32,14 @@ An MCP (Model Context Protocol) server for organizing music libraries with LLM a
 
 ### Optional
 
+- **[keyfinder-cli](https://github.com/evanpurkhiser/keyfinder-cli)** — Required for musical key detection (`analyze_key`, `batch_analyze_key`). Uses libKeyFinder for high-quality key estimation.
+  ```sh
+  # macOS
+  brew install evanpurkhiser/personal/keyfinder-cli
+
+  # Linux — build from source
+  # See: https://github.com/evanpurkhiser/keyfinder-cli#building
+  ```
 - **Rekordbox** — For Rekordbox integration, you need Rekordbox installed. The server reads `~/Library/Pioneer/rekordbox/master.db` by default (macOS). The database is encrypted with SQLCipher4. You'll need `better-sqlite3-multiple-ciphers` instead of `better-sqlite3` for full Rekordbox support — see [Rekordbox Setup](#rekordbox-setup).
 - **Engine DJ** — For Engine DJ integration, connect a drive with an Engine Library, or point to a local Engine Library database.
 
@@ -133,12 +146,14 @@ The main workflow — point at a downloads folder, ingest into your library.
 | `write_tags` | Write/update tags (goes to overlay in dry mode) |
 | `suggest_tags` | Show current tags and suggest empty fields to fill |
 
-### BPM & Analysis
+### BPM & Key Analysis
 
 | Tool | Description |
 |---|---|
 | `analyze_bpm` | Detect BPM of a single audio file |
 | `batch_analyze_bpm` | Batch BPM analysis with concurrency control |
+| `analyze_key` | Detect musical key of a single audio file (requires [keyfinder-cli](https://github.com/evanpurkhiser/keyfinder-cli)) |
+| `batch_analyze_key` | Batch key detection with concurrency control |
 
 ### File Operations
 
@@ -405,7 +420,7 @@ src/
 ├── server.ts             # McpServer setup, tool registration
 ├── overlay/              # Dry-mode overlay filesystem (memfs + unionfs)
 ├── plans/                # Plan create/export/import/resume
-├── audio/                # BPM analysis, audio decoding
+├── audio/                # BPM analysis, key detection, audio decoding
 ├── tags/                 # ID3 tag read/write
 ├── playlists/            # M3U/M3U8 management
 ├── rekordbox/            # Rekordbox database integration
