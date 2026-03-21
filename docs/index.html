@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bangersss — AI-powered music library management for DJs</title>
-  <meta name="description" content="AI-powered music library organization for DJs. Safe, smart, and reversible. Supports Rekordbox, Engine DJ, BPM analysis, and more.">
+  <meta name="description" content="AI-powered music library organization for DJs. Safe, smart, and reversible. Supports Rekordbox, Engine DJ, BPM analysis, key detection, and more.">
   <meta property="og:title" content="Bangersss">
   <meta property="og:description" content="AI-powered music library organization for DJs — safe, smart, and reversible.">
   <meta property="og:type" content="website">
@@ -669,7 +669,7 @@
           <svg fill="none" stroke="#e5a800" stroke-width="2" viewBox="0 0 24 24"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
         </div>
         <h3>BPM & Key Analysis</h3>
-        <p>Detect BPM, musical key, and harmonic mixing compatibility.</p>
+        <p>Detect BPM and musical key from audio. Camelot wheel compatibility for harmonic mixing.</p>
       </div>
       <div class="feature-card">
         <div class="icon">
@@ -910,7 +910,7 @@
       </ul>
     </div>
     <div class="tool-cat">
-      <h3>Tags & Analysis <span class="count">6</span></h3>
+      <h3>Tags & Analysis <span class="count">8</span></h3>
       <ul>
         <li>read_tags</li>
         <li>batch_read_tags</li>
@@ -918,6 +918,8 @@
         <li>suggest_tags</li>
         <li>analyze_bpm</li>
         <li>batch_analyze_bpm</li>
+        <li>analyze_key</li>
+        <li>batch_analyze_key</li>
       </ul>
     </div>
     <div class="tool-cat">
@@ -1055,7 +1057,7 @@
 
   <div style="margin-top: 2rem;">
     <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Prerequisites</h3>
-    <p style="font-size: 0.875rem; color: var(--text-muted);">Node.js &ge; 20 &middot; ffmpeg (for BPM analysis) &middot; Rekordbox or Engine DJ (optional)</p>
+    <p style="font-size: 0.875rem; color: var(--text-muted);">Node.js &ge; 20 &middot; ffmpeg (for BPM analysis) &middot; <a href="https://github.com/evanpurkhiser/keyfinder-cli" style="color: var(--text-muted);">keyfinder-cli</a> (for key detection) &middot; Rekordbox or Engine DJ (optional)</p>
   </div>
 </section>
 
