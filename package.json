@@ -1,11 +1,12 @@
 {
-  "name": "musicsorter-mcp",
+  "name": "cratedigger",
   "version": "0.1.0",
   "description": "MCP server for organizing music with LLM assistance - built for DJs",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "musicsorter-mcp": "dist/index.js"
+    "cratedigger": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

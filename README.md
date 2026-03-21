@@ -1,4 +1,4 @@
-# MusicSorter MCP Server
+# cratedigger
 
 An MCP (Model Context Protocol) server for organizing music libraries with LLM assistance. Built for DJs — supports Rekordbox, Engine DJ, BPM analysis, ID3 tags, playlists, and safe dry-mode operation.
 
@@ -34,8 +34,8 @@ An MCP (Model Context Protocol) server for organizing music libraries with LLM a
 
 ```sh
 # Clone the repo
-git clone <your-repo-url> musicsorter
-cd musicsorter
+git clone https://github.com/albinekb/cratedigger.git
+cd cratedigger
 
 # Install dependencies
 npm install
@@ -51,9 +51,9 @@ Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.cla
 ```json
 {
   "mcpServers": {
-    "musicsorter": {
+    "cratedigger": {
       "command": "node",
-      "args": ["/path/to/musicsorter/dist/index.js"]
+      "args": ["/path/to/cratedigger/dist/index.js"]
     }
   }
 }
@@ -64,9 +64,9 @@ Or for development:
 ```json
 {
   "mcpServers": {
-    "musicsorter": {
+    "cratedigger": {
       "command": "npx",
-      "args": ["tsx", "/path/to/musicsorter/src/index.ts"]
+      "args": ["tsx", "/path/to/cratedigger/src/index.ts"]
     }
   }
 }
@@ -79,9 +79,9 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ```json
 {
   "mcpServers": {
-    "musicsorter": {
+    "cratedigger": {
       "command": "node",
-      "args": ["/path/to/musicsorter/dist/index.js"]
+      "args": ["/path/to/cratedigger/dist/index.js"]
     }
   }
 }
@@ -162,7 +162,7 @@ The main workflow — point at a downloads folder, ingest into your library.
 | `add_to_plan` | Add an operation to a plan |
 | `view_plan` | Inspect a plan's operations and status |
 | `execute_plan` | Execute all pending operations |
-| `export_plan` | Save plan to a `.musicsorter-plan.json` file |
+| `export_plan` | Save plan to a `.cratedigger-plan.json` file |
 | `import_plan` | Load a plan from file |
 | `resume_plan` | Continue a partially-completed plan |
 | `list_plans` | List all plans |
@@ -306,13 +306,13 @@ Claude: [calls commit_selective with filtered paths]
 Plans are portable, resumable operation sequences. Use them to:
 
 - **Review before executing** — Create a plan, export it, review the JSON
-- **Share** — Send a `.musicsorter-plan.json` to another DJ
+- **Share** — Send a `.cratedigger-plan.json` to another DJ
 - **Resume** — If execution is interrupted, import the plan and resume from where it left off
 - **Reuse** — Import a plan template and apply it to a different folder
 
 ### Plan format
 
-Plans are stored as JSON with a `.musicsorter-plan.json` extension:
+Plans are stored as JSON with a `.cratedigger-plan.json` extension:
 
 ```json
 {

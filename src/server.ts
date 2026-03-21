@@ -25,7 +25,7 @@ export interface ServerContext {
 
 export function createServer(): { server: McpServer; context: ServerContext } {
   const server = new McpServer({
-    name: 'musicsorter',
+    name: 'cratedigger',
     version: '0.1.0',
   });
 
@@ -47,7 +47,7 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   registerFileTools(server, context);
   registerIngestTools(server, context);
 
-  log.info('MusicSorter MCP server initialized');
+  log.info('cratedigger MCP server initialized');
 
   return { server, context };
 }

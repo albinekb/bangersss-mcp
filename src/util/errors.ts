@@ -1,42 +1,42 @@
-export class MusicSorterError extends Error {
+export class CrateDiggerError extends Error {
   constructor(
     message: string,
     public readonly code: string,
   ) {
     super(message);
-    this.name = 'MusicSorterError';
+    this.name = 'CrateDiggerError';
   }
 }
 
-export class OverlayError extends MusicSorterError {
+export class OverlayError extends CrateDiggerError {
   constructor(message: string) {
     super(message, 'OVERLAY_ERROR');
     this.name = 'OverlayError';
   }
 }
 
-export class PlanError extends MusicSorterError {
+export class PlanError extends CrateDiggerError {
   constructor(message: string) {
     super(message, 'PLAN_ERROR');
     this.name = 'PlanError';
   }
 }
 
-export class AudioAnalysisError extends MusicSorterError {
+export class AudioAnalysisError extends CrateDiggerError {
   constructor(message: string) {
     super(message, 'AUDIO_ANALYSIS_ERROR');
     this.name = 'AudioAnalysisError';
   }
 }
 
-export class TagError extends MusicSorterError {
+export class TagError extends CrateDiggerError {
   constructor(message: string) {
     super(message, 'TAG_ERROR');
     this.name = 'TagError';
   }
 }
 
-export class DatabaseError extends MusicSorterError {
+export class DatabaseError extends CrateDiggerError {
   constructor(message: string) {
     super(message, 'DATABASE_ERROR');
     this.name = 'DatabaseError';

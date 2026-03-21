@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "musicsorter": {
+    "cratedigger": {
       "command": "npx",
-      "args": ["tsx", "/Users/albinekb/Devel/git/musicsorter/src/index.ts"]
+      "args": ["tsx", "src/index.ts"]
     }
   }
 }

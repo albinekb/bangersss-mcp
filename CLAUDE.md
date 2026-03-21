@@ -1,4 +1,4 @@
-# MusicSorter MCP Server
+# cratedigger
 
 ## What this is
 
