@@ -1,6 +1,6 @@
 {
   "name": "bangersss-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "MCP server for organizing music with LLM assistance - built for DJs",
   "license": "MIT",
   "type": "module",
