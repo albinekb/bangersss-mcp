@@ -39,9 +39,12 @@ export function registerScanTools(
             : [...SUPPORTED_FORMATS]
 
         const pattern = buildExtensionGlob(exts)
+        const normDir = dirPath.replace(/\\/g, '/')
+        const fullPattern = recursive
+          ? `${normDir}/**/${pattern}`
+          : `${normDir}/${pattern}`
 
-        const files = await fg(recursive ? `**/${pattern}` : pattern, {
-          cwd: dirPath,
+        const files = await fg(fullPattern, {
           absolute: true,
           onlyFiles: true,
           followSymbolicLinks: false,
@@ -98,8 +101,9 @@ export function registerScanTools(
     },
     async ({ path: dirPath, pattern, sortBy }) => {
       try {
-        const files = await fg(pattern ? normalizeGlobPattern(pattern) : '*', {
-          cwd: dirPath,
+        const normDir = dirPath.replace(/\\/g, '/')
+        const globPattern = pattern ? normalizeGlobPattern(pattern) : '*'
+        const files = await fg(`${normDir}/${globPattern}`, {
           absolute: true,
           onlyFiles: true,
           followSymbolicLinks: false,

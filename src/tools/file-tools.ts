@@ -110,8 +110,8 @@ export function registerFileTools(
     },
     async ({ directory, pattern, template }) => {
       try {
-        const files = await fg(normalizeGlobPattern(pattern), {
-          cwd: directory,
+        const normDir = directory.replace(/\\/g, '/')
+        const files = await fg(`${normDir}/${normalizeGlobPattern(pattern)}`, {
           absolute: true,
           onlyFiles: true,
         })
@@ -216,8 +216,8 @@ export function registerFileTools(
     },
     async ({ directory, template }) => {
       try {
-        const files = await fg('**/*', {
-          cwd: directory,
+        const normDir = directory.replace(/\\/g, '/')
+        const files = await fg(`${normDir}/**/*`, {
           absolute: true,
           onlyFiles: true,
         })

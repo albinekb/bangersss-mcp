@@ -204,9 +204,12 @@ export function registerIngestTools(
       try {
         const exts = [...SUPPORTED_FORMATS]
         const pattern = buildExtensionGlob(exts)
+        const normDir = dirPath.replace(/\\/g, '/')
+        const fullPattern = recursive
+          ? `${normDir}/**/${pattern}`
+          : `${normDir}/${pattern}`
 
-        const files = await fg(recursive ? `**/${pattern}` : pattern, {
-          cwd: dirPath,
+        const files = await fg(fullPattern, {
           absolute: true,
           onlyFiles: true,
           followSymbolicLinks: false,
