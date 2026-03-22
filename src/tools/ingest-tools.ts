@@ -227,6 +227,7 @@ export function registerIngestTools(
 
         for (const { filePath } of walkedFiles) {
           const stat = await fs.stat(filePath)
+          if (stat.size === 0) continue // Skip zero-byte files
           const ext = path.extname(filePath).toLowerCase()
           formatCounts[ext] = (formatCounts[ext] ?? 0) + 1
           totalSize += stat.size

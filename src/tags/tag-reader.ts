@@ -26,7 +26,7 @@ export interface TrackMetadata {
  * @returns Parsed metadata.
  */
 export async function readTags(filePath: string): Promise<TrackMetadata> {
-  const metadata = await parseFile(filePath, { skipCovers: true })
+  const metadata = await parseFile(filePath, { skipCovers: true,includeChapters: false, })
 
   const { common, format } = metadata
 
