@@ -16,7 +16,7 @@ import { z } from 'zod';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import fg from 'fast-glob';
-import { readTags, type TrackMetadata } from '../tags/tag-reader.js';
+import { readTags, batchReadTags, type TrackMetadata } from '../tags/tag-reader.js';
 import { analyzeBpm } from '../audio/bpm-analyzer.js';
 import { getKeyInfo } from '../audio/keys.js';
 import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js';
@@ -101,6 +101,8 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
       recursive: z.boolean().optional().default(true).describe('Scan subdirectories'),
       summaryOnly: z.boolean().optional().default(false)
         .describe('Only return aggregate stats (format counts, tag coverage, date ranges) — no file list'),
+      skipTags: z.boolean().optional().default(false)
+        .describe('Skip tag reading for faster scanning — returns file info without tag data or tag coverage stats'),
       groupBy: z.enum(['artist', 'genre', 'date', 'format', 'folder']).optional()
         .describe('Group results by a field. Returns counts per group instead of individual files'),
       limit: z.number().optional().default(50)
@@ -121,7 +123,7 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
         dateBefore: z.string().optional().describe('Only files modified before this ISO date'),
       }).optional().describe('Filter the results'),
     },
-    async ({ path: dirPath, recursive, summaryOnly, groupBy, limit, offset, sortBy, filter }) => {
+    async ({ path: dirPath, recursive, summaryOnly, skipTags, groupBy, limit, offset, sortBy, filter }) => {
       try {
         const exts = [...SUPPORTED_FORMATS];
         const pattern = `*{${exts.join(',')}}`;
@@ -136,20 +138,18 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           stats: true,
         });
 
-        // Build track list with tags
-        const tracks: ScannedTrack[] = [];
+        // Phase 1: Fast stat-based pass (no tag reading)
+        const filePaths: string[] = [];
         const formatCounts: Record<string, number> = {};
-        let missingTitle = 0;
-        let missingArtist = 0;
-        let missingGenre = 0;
-        let missingBpm = 0;
-        let missingKey = 0;
         let totalSize = 0;
         const dateRange = { earliest: '', latest: '' };
+        const fileInfos: Array<{ path: string; filename: string; size: number; modified: string }> = [];
 
         for (const entry of files) {
           const filePath = typeof entry === 'string' ? entry : entry.path;
-          const stat = typeof entry === 'string' ? await fs.stat(entry) : await fs.stat(entry.path);
+          const stat = (typeof entry !== 'string' && entry.stats)
+            ? entry.stats
+            : await fs.stat(filePath);
           const ext = path.extname(filePath).toLowerCase();
           formatCounts[ext] = (formatCounts[ext] ?? 0) + 1;
           totalSize += stat.size;
@@ -158,53 +158,69 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           if (!dateRange.earliest || modified < dateRange.earliest) dateRange.earliest = modified;
           if (!dateRange.latest || modified > dateRange.latest) dateRange.latest = modified;
 
-          let tags: TrackMetadata | null = null;
-          let tagErrors: string | undefined;
-          try {
-            tags = await readTags(filePath);
-          } catch (err) {
-            tagErrors = err instanceof Error ? err.message : String(err);
-          }
-
-          if (tags) {
-            if (!tags.title) missingTitle++;
-            if (!tags.artist) missingArtist++;
-            if (!tags.genre) missingGenre++;
-            if (!tags.bpm) missingBpm++;
-            if (!tags.key) missingKey++;
-          } else {
-            missingTitle++;
-            missingArtist++;
-            missingGenre++;
-            missingBpm++;
-            missingKey++;
-          }
-
-          tracks.push({
+          filePaths.push(filePath);
+          fileInfos.push({
             path: filePath,
             filename: path.basename(filePath),
             size: stat.size,
             modified,
-            tags,
-            tagErrors,
           });
         }
 
-        const summary = {
+        // Phase 2: Batch tag reading (parallel, concurrency-limited)
+        let tagMap: Map<string, TrackMetadata> | null = null;
+        let missingTitle = 0;
+        let missingArtist = 0;
+        let missingGenre = 0;
+        let missingBpm = 0;
+        let missingKey = 0;
+
+        if (!skipTags) {
+          tagMap = await batchReadTags(filePaths, { concurrency: 8 });
+
+          for (const fp of filePaths) {
+            const tags = tagMap.get(fp);
+            if (tags) {
+              if (!tags.title) missingTitle++;
+              if (!tags.artist) missingArtist++;
+              if (!tags.genre) missingGenre++;
+              if (!tags.bpm) missingBpm++;
+              if (!tags.key) missingKey++;
+            } else {
+              missingTitle++;
+              missingArtist++;
+              missingGenre++;
+              missingBpm++;
+              missingKey++;
+            }
+          }
+        }
+
+        // Build tracks array
+        const tracks: ScannedTrack[] = fileInfos.map((info) => ({
+          ...info,
+          tags: tagMap?.get(info.path) ?? null,
+          tagErrors: tagMap && !tagMap.has(info.path) ? 'Failed to read tags' : undefined,
+        }));
+
+        const summary: Record<string, unknown> = {
           sourceDirectory: dirPath,
           totalFiles: tracks.length,
           totalSize,
           totalSizeHuman: formatBytes(totalSize),
           formats: formatCounts,
           dateRange,
-          tagCoverage: {
+        };
+
+        if (!skipTags) {
+          summary.tagCoverage = {
             missingTitle,
             missingArtist,
             missingGenre,
             missingBpm,
             missingKey,
-          },
-        };
+          };
+        }
 
         // Summary only — return just stats
         if (summaryOnly) {
@@ -367,6 +383,9 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
     },
     async ({ paths: filePaths, detectBpm, libraryRoot, organizationTemplate }) => {
       try {
+        // Batch read tags upfront (parallel, concurrency-limited)
+        const tagMap = await batchReadTags(filePaths, { concurrency: 8 });
+
         const results: IngestAnalysis[] = [];
 
         for (const filePath of filePaths) {
@@ -374,12 +393,10 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           const ext = path.extname(filePath);
           const issues: string[] = [];
 
-          // Read tags
-          let tags: TrackMetadata | null = null;
-          try {
-            tags = await readTags(filePath);
-          } catch (err) {
-            issues.push(`Failed to read tags: ${err instanceof Error ? err.message : String(err)}`);
+          // Use pre-read tags
+          const tags = tagMap.get(filePath) ?? null;
+          if (!tags) {
+            issues.push('Failed to read tags');
           }
 
           // Check tag completeness
@@ -491,15 +508,14 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           const existing = libraryIndex.get(basename) ?? [];
           existing.push(libFile);
           libraryIndex.set(basename, existing);
+        }
 
-          try {
-            const tags = await readTags(libFile);
-            if (tags.artist && tags.title) {
-              const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`;
-              libraryTagIndex.set(key, libFile);
-            }
-          } catch {
-            // Skip files that can't be read
+        // Batch read library tags for tag-based dedup
+        const libTagMap = await batchReadTags(libraryFiles, { concurrency: 8 });
+        for (const [libFile, tags] of libTagMap) {
+          if (tags.artist && tags.title) {
+            const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`;
+            libraryTagIndex.set(key, libFile);
           }
         }
 
@@ -748,19 +764,19 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
           };
         }
 
-        // 2. Read tags for all incoming files
+        // 2. Batch read tags for all incoming files (parallel, concurrency-limited)
+        const incomingTagMap = await batchReadTags(incomingFiles, { concurrency: 8 });
         const trackData: Array<{ path: string; tags: TrackMetadata | null; issues: string[] }> = [];
         for (const filePath of incomingFiles) {
-          let tags: TrackMetadata | null = null;
+          const tags = incomingTagMap.get(filePath) ?? null;
           const issues: string[] = [];
-          try {
-            tags = await readTags(filePath);
+          if (tags) {
             if (!tags.title) issues.push('missing title');
             if (!tags.artist) issues.push('missing artist');
             if (!tags.genre) issues.push('missing genre');
             if (!tags.bpm) issues.push('missing bpm');
-          } catch (err) {
-            issues.push(`unreadable tags: ${err instanceof Error ? err.message : String(err)}`);
+          } else {
+            issues.push('unreadable tags');
           }
           trackData.push({ path: filePath, tags, issues });
         }
@@ -775,19 +791,17 @@ export function registerIngestTools(server: McpServer, context: ServerContext): 
             onlyFiles: true,
           });
 
-          // Build indexes
+          // Build indexes: filename-based (fast) + tag-based (batch parallel)
           const filenameIndex = new Map<string, string>();
-          const tagIndex = new Map<string, string>();
-
           for (const libFile of libraryFiles) {
             filenameIndex.set(path.basename(libFile).toLowerCase(), libFile);
-            try {
-              const libTags = await readTags(libFile);
-              if (libTags.artist && libTags.title) {
-                tagIndex.set(`${libTags.artist.toLowerCase()}|${libTags.title.toLowerCase()}`, libFile);
-              }
-            } catch {
-              // skip
+          }
+
+          const tagIndex = new Map<string, string>();
+          const libTagMap = await batchReadTags(libraryFiles, { concurrency: 8 });
+          for (const [libFile, libTags] of libTagMap) {
+            if (libTags.artist && libTags.title) {
+              tagIndex.set(`${libTags.artist.toLowerCase()}|${libTags.title.toLowerCase()}`, libFile);
             }
           }
 
