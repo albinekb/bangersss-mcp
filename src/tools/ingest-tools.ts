@@ -16,7 +16,12 @@ import { z } from 'zod'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
 import fg from 'fast-glob'
-import { readTags, batchReadTags, type TrackMetadata } from '../tags/tag-reader.js'
+import bytes from 'bytes'
+import {
+  readTags,
+  batchReadTags,
+  type TrackMetadata,
+} from '../tags/tag-reader.js'
 import { analyzeBpm } from '../audio/bpm-analyzer.js'
 import { getKeyInfo } from '../audio/keys.js'
 import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
@@ -139,6 +144,11 @@ export function registerIngestTools(
         .describe(
           'Group results by a field. Returns counts per group instead of individual files',
         ),
+      minFileSize: z
+        .string()
+        .optional()
+        .default('1MB')
+        .describe('Ignore files smaller than this size (e.g. "1MB", "500KB")'),
       limit: z
         .number()
         .optional()
@@ -199,6 +209,7 @@ export function registerIngestTools(
       limit,
       offset,
       sortBy,
+      minFileSize,
       filter,
     }) => {
       try {
@@ -225,9 +236,12 @@ export function registerIngestTools(
           modified: string
         }> = []
 
+        const minSizeBytes = bytes(minFileSize) || 0
+
         for (const { filePath } of walkedFiles) {
           const stat = await fs.stat(filePath)
           if (stat.size === 0) continue // Skip zero-byte files
+          if (stat.size < minSizeBytes) continue // Skip files smaller than min size
           const ext = path.extname(filePath).toLowerCase()
           formatCounts[ext] = (formatCounts[ext] ?? 0) + 1
           totalSize += stat.size
