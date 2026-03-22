@@ -4,8 +4,8 @@
  * Write operations return journaled SQL rather than executing directly.
  */
 
-import type { Database } from 'better-sqlite3-multiple-ciphers';
-import type { EdjCrate, EdjTrack } from './schema.js';
+import type { Database } from 'better-sqlite3-multiple-ciphers'
+import type { EdjCrate, EdjTrack } from './schema.js'
 
 /**
  * Return all crates in the Engine DJ library.
@@ -13,7 +13,7 @@ import type { EdjCrate, EdjTrack } from './schema.js';
 export function getCrates(db: Database): EdjCrate[] {
   return db
     .prepare('SELECT id, title, path FROM Crate ORDER BY path')
-    .all() as EdjCrate[];
+    .all() as EdjCrate[]
 }
 
 /**
@@ -28,7 +28,7 @@ export function getCrateTracks(db: Database, crateId: number): EdjTrack[] {
        WHERE ctl.crateId = ?
        ORDER BY t.title`,
     )
-    .all(crateId) as EdjTrack[];
+    .all(crateId) as EdjTrack[]
 }
 
 /**
@@ -40,10 +40,10 @@ export function createCrate(
   _db: Database,
   name: string,
 ): { sql: string; params: unknown[] } {
-  const sql = `INSERT INTO Crate (title, path) VALUES (?, ?)`;
-  const params: unknown[] = [name, `Root;${name};`];
+  const sql = `INSERT INTO Crate (title, path) VALUES (?, ?)`
+  const params: unknown[] = [name, `Root;${name};`]
 
-  return { sql, params };
+  return { sql, params }
 }
 
 /**
@@ -57,13 +57,13 @@ export function addToCrate(
   crateId: number,
   trackIds: number[],
 ): { sql: string[]; params: unknown[][] } {
-  const sqls: string[] = [];
-  const allParams: unknown[][] = [];
+  const sqls: string[] = []
+  const allParams: unknown[][] = []
 
   for (const trackId of trackIds) {
-    sqls.push('INSERT INTO CrateTrackList (crateId, trackId) VALUES (?, ?)');
-    allParams.push([crateId, trackId]);
+    sqls.push('INSERT INTO CrateTrackList (crateId, trackId) VALUES (?, ?)')
+    allParams.push([crateId, trackId])
   }
 
-  return { sql: sqls, params: allParams };
+  return { sql: sqls, params: allParams }
 }

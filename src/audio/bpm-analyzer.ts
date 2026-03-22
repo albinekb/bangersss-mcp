@@ -2,13 +2,13 @@
  * BPM detection using autocorrelation on PCM audio data decoded via ffmpeg.
  */
 
-import { decodeToFloat32 } from './audio-decoder.js';
+import { decodeToFloat32 } from './audio-decoder.js'
 
 export interface BpmResult {
   /** Detected beats per minute. */
-  bpm: number;
+  bpm: number
   /** Confidence score between 0 and 1. */
-  confidence: number;
+  confidence: number
 }
 
 // ---------------------------------------------------------------------------
@@ -24,21 +24,21 @@ function computeEnergyEnvelope(
   sampleRate: number,
   frameMs = 10,
 ): Float32Array {
-  const frameSize = Math.round((sampleRate * frameMs) / 1000);
-  const numFrames = Math.floor(samples.length / frameSize);
-  const envelope = new Float32Array(numFrames);
+  const frameSize = Math.round((sampleRate * frameMs) / 1000)
+  const numFrames = Math.floor(samples.length / frameSize)
+  const envelope = new Float32Array(numFrames)
 
   for (let i = 0; i < numFrames; i++) {
-    let sum = 0;
-    const offset = i * frameSize;
+    let sum = 0
+    const offset = i * frameSize
     for (let j = 0; j < frameSize; j++) {
-      const v = samples[offset + j];
-      sum += v * v;
+      const v = samples[offset + j]
+      sum += v * v
     }
-    envelope[i] = Math.sqrt(sum / frameSize);
+    envelope[i] = Math.sqrt(sum / frameSize)
   }
 
-  return envelope;
+  return envelope
 }
 
 /**
@@ -46,12 +46,12 @@ function computeEnergyEnvelope(
  * of the energy envelope.
  */
 function onsetStrength(envelope: Float32Array): Float32Array {
-  const oss = new Float32Array(envelope.length);
+  const oss = new Float32Array(envelope.length)
   for (let i = 1; i < envelope.length; i++) {
-    const diff = envelope[i] - envelope[i - 1];
-    oss[i] = diff > 0 ? diff : 0;
+    const diff = envelope[i] - envelope[i - 1]
+    oss[i] = diff > 0 ? diff : 0
   }
-  return oss;
+  return oss
 }
 
 /**
@@ -62,27 +62,27 @@ function autocorrelation(
   minLag: number,
   maxLag: number,
 ): Float32Array {
-  const len = maxLag - minLag + 1;
-  const result = new Float32Array(len);
+  const len = maxLag - minLag + 1
+  const result = new Float32Array(len)
 
   // Energy at lag 0 for normalisation.
-  let energy0 = 0;
+  let energy0 = 0
   for (let i = 0; i < signal.length; i++) {
-    energy0 += signal[i] * signal[i];
+    energy0 += signal[i] * signal[i]
   }
 
-  if (energy0 === 0) return result;
+  if (energy0 === 0) return result
 
   for (let idx = 0; idx < len; idx++) {
-    const lag = minLag + idx;
-    let sum = 0;
+    const lag = minLag + idx
+    let sum = 0
     for (let i = 0; i < signal.length - lag; i++) {
-      sum += signal[i] * signal[i + lag];
+      sum += signal[i] * signal[i + lag]
     }
-    result[idx] = sum / energy0;
+    result[idx] = sum / energy0
   }
 
-  return result;
+  return result
 }
 
 /**
@@ -96,45 +96,45 @@ function pickBestBpm(
 ): BpmResult {
   // Find local peaks in the ACF.
   interface Peak {
-    lag: number;
-    value: number;
+    lag: number
+    value: number
   }
-  const peaks: Peak[] = [];
+  const peaks: Peak[] = []
 
   for (let i = 1; i < acf.length - 1; i++) {
     if (acf[i] > acf[i - 1] && acf[i] > acf[i + 1] && acf[i] > 0.01) {
-      peaks.push({ lag: minLag + i, value: acf[i] });
+      peaks.push({ lag: minLag + i, value: acf[i] })
     }
   }
 
   if (peaks.length === 0) {
-    return { bpm: 0, confidence: 0 };
+    return { bpm: 0, confidence: 0 }
   }
 
   // Sort peaks by value descending.
-  peaks.sort((a, b) => b.value - a.value);
+  peaks.sort((a, b) => b.value - a.value)
 
   // Convert lag to BPM: BPM = 60 * framesPerSecond / lag
   const candidates = peaks.slice(0, 10).map((p) => ({
     bpm: (60 * framesPerSecond) / p.lag,
     value: p.value,
-  }));
+  }))
 
   // Prefer tempos in the 80-180 range (common for most music).
   const scored = candidates.map((c) => {
-    let bonus = 1.0;
-    if (c.bpm >= 80 && c.bpm <= 180) bonus = 1.3;
-    else if (c.bpm >= 60 && c.bpm <= 200) bonus = 1.1;
-    return { ...c, score: c.value * bonus };
-  });
+    let bonus = 1.0
+    if (c.bpm >= 80 && c.bpm <= 180) bonus = 1.3
+    else if (c.bpm >= 60 && c.bpm <= 200) bonus = 1.1
+    return { ...c, score: c.value * bonus }
+  })
 
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort((a, b) => b.score - a.score)
 
-  const best = scored[0];
-  const maxAcf = peaks[0].value;
-  const confidence = Math.min(1, best.value / Math.max(maxAcf, 0.001));
+  const best = scored[0]
+  const maxAcf = peaks[0].value
+  const confidence = Math.min(1, best.value / Math.max(maxAcf, 0.001))
 
-  return { bpm: Math.round(best.bpm * 10) / 10, confidence };
+  return { bpm: Math.round(best.bpm * 10) / 10, confidence }
 }
 
 // ---------------------------------------------------------------------------
@@ -152,32 +152,32 @@ function pickBestBpm(
  */
 export async function analyzeBpm(filePath: string): Promise<BpmResult> {
   // Decode at a lower sample rate to speed up analysis — 22050 Hz is enough.
-  const analysisSampleRate = 22050;
+  const analysisSampleRate = 22050
   const { samples, sampleRate } = await decodeToFloat32(
     filePath,
     analysisSampleRate,
     true,
-  );
+  )
 
-  const frameMs = 10;
-  const framesPerSecond = 1000 / frameMs;
+  const frameMs = 10
+  const framesPerSecond = 1000 / frameMs
 
   // 1. Compute energy envelope.
-  const envelope = computeEnergyEnvelope(samples, sampleRate, frameMs);
+  const envelope = computeEnergyEnvelope(samples, sampleRate, frameMs)
 
   // 2. Onset strength.
-  const oss = onsetStrength(envelope);
+  const oss = onsetStrength(envelope)
 
   // 3. Autocorrelation over a BPM range of 40–220.
-  const minBpm = 40;
-  const maxBpm = 220;
-  const minLag = Math.floor(framesPerSecond * (60 / maxBpm));
-  const maxLag = Math.ceil(framesPerSecond * (60 / minBpm));
+  const minBpm = 40
+  const maxBpm = 220
+  const minLag = Math.floor(framesPerSecond * (60 / maxBpm))
+  const maxLag = Math.ceil(framesPerSecond * (60 / minBpm))
 
-  const acf = autocorrelation(oss, minLag, Math.min(maxLag, oss.length - 1));
+  const acf = autocorrelation(oss, minLag, Math.min(maxLag, oss.length - 1))
 
   // 4. Pick the best candidate.
-  return pickBestBpm(acf, minLag, framesPerSecond);
+  return pickBestBpm(acf, minLag, framesPerSecond)
 }
 
 /**
@@ -190,21 +190,21 @@ export async function batchAnalyzeBpm(
   filePaths: string[],
   concurrency = 4,
 ): Promise<Map<string, BpmResult>> {
-  const results = new Map<string, BpmResult>();
-  const queue = [...filePaths];
+  const results = new Map<string, BpmResult>()
+  const queue = [...filePaths]
 
   async function worker(): Promise<void> {
     while (queue.length > 0) {
-      const fp = queue.shift();
-      if (!fp) break;
+      const fp = queue.shift()
+      if (!fp) break
       try {
-        const result = await analyzeBpm(fp);
-        results.set(fp, result);
+        const result = await analyzeBpm(fp)
+        results.set(fp, result)
       } catch (err) {
         results.set(fp, {
           bpm: 0,
           confidence: 0,
-        });
+        })
       }
     }
   }
@@ -212,8 +212,8 @@ export async function batchAnalyzeBpm(
   const workers = Array.from(
     { length: Math.min(concurrency, filePaths.length) },
     () => worker(),
-  );
-  await Promise.all(workers);
+  )
+  await Promise.all(workers)
 
-  return results;
+  return results
 }

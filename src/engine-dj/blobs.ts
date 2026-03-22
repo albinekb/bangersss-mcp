@@ -6,7 +6,7 @@
  * indicating the uncompressed size.
  */
 
-import { inflateSync, deflateSync } from 'node:zlib';
+import { inflateSync, deflateSync } from 'node:zlib'
 
 /**
  * Decompress an Engine DJ blob.
@@ -20,13 +20,13 @@ export function decompressBlob(buf: Buffer): Buffer {
   if (buf.length < 4) {
     throw new Error(
       `Blob too small: expected at least 4 bytes, got ${buf.length}`,
-    );
+    )
   }
 
-  const _uncompressedSize = buf.readUInt32LE(0);
-  const compressedData = buf.subarray(4);
+  const _uncompressedSize = buf.readUInt32LE(0)
+  const compressedData = buf.subarray(4)
 
-  return Buffer.from(inflateSync(compressedData));
+  return Buffer.from(inflateSync(compressedData))
 }
 
 /**
@@ -39,10 +39,10 @@ export function decompressBlob(buf: Buffer): Buffer {
  * @returns A buffer in Engine DJ blob format.
  */
 export function compressBlob(data: Buffer): Buffer {
-  const header = Buffer.alloc(4);
-  header.writeUInt32LE(data.length, 0);
+  const header = Buffer.alloc(4)
+  header.writeUInt32LE(data.length, 0)
 
-  const compressed = deflateSync(data);
+  const compressed = deflateSync(data)
 
-  return Buffer.concat([header, compressed]);
+  return Buffer.concat([header, compressed])
 }

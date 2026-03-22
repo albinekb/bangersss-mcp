@@ -8,24 +8,24 @@ import type {
   AddToRekordboxPlaylistOp,
   AddToEngineCrateOp,
   DeleteFileOp,
-} from "./types.js";
+} from './types.js'
 
 export function createRenameOp(from: string, to: string): RenameFileOp {
   return {
-    type: "rename_file",
-    status: "pending",
+    type: 'rename_file',
+    status: 'pending',
     from,
     to,
-  };
+  }
 }
 
 export function createMoveOp(from: string, to: string): MoveFileOp {
   return {
-    type: "move_file",
-    status: "pending",
+    type: 'move_file',
+    status: 'pending',
     from,
     to,
-  };
+  }
 }
 
 export function createWriteTagsOp(
@@ -33,20 +33,20 @@ export function createWriteTagsOp(
   tags: Record<string, unknown>,
 ): WriteTagsOp {
   return {
-    type: "write_tags",
-    status: "pending",
+    type: 'write_tags',
+    status: 'pending',
     path,
     tags,
-  };
+  }
 }
 
 export function createSetBpmOp(path: string, bpm: number): SetBpmOp {
   return {
-    type: "set_bpm",
-    status: "pending",
+    type: 'set_bpm',
+    status: 'pending',
     path,
     bpm,
-  };
+  }
 }
 
 export function createPlaylistOp(
@@ -54,11 +54,11 @@ export function createPlaylistOp(
   tracks: string[],
 ): CreatePlaylistOp {
   return {
-    type: "create_playlist",
-    status: "pending",
+    type: 'create_playlist',
+    status: 'pending',
     name,
     tracks,
-  };
+  }
 }
 
 export function createAddToPlaylistOp(
@@ -66,11 +66,11 @@ export function createAddToPlaylistOp(
   tracks: string[],
 ): AddToPlaylistOp {
   return {
-    type: "add_to_playlist",
-    status: "pending",
+    type: 'add_to_playlist',
+    status: 'pending',
     name,
     tracks,
-  };
+  }
 }
 
 export function createAddToRekordboxPlaylistOp(
@@ -78,11 +78,11 @@ export function createAddToRekordboxPlaylistOp(
   tracks: string[],
 ): AddToRekordboxPlaylistOp {
   return {
-    type: "add_to_rekordbox_playlist",
-    status: "pending",
+    type: 'add_to_rekordbox_playlist',
+    status: 'pending',
     name,
     tracks,
-  };
+  }
 }
 
 export function createAddToEngineCrateOp(
@@ -90,17 +90,17 @@ export function createAddToEngineCrateOp(
   tracks: string[],
 ): AddToEngineCrateOp {
   return {
-    type: "add_to_engine_crate",
-    status: "pending",
+    type: 'add_to_engine_crate',
+    status: 'pending',
     name,
     tracks,
-  };
+  }
 }
 
 export function createDeleteFileOp(path: string): DeleteFileOp {
   return {
-    type: "delete_file",
-    status: "pending",
+    type: 'delete_file',
+    status: 'pending',
     path,
-  };
+  }
 }

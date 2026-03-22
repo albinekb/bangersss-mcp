@@ -5,18 +5,18 @@
  * Install via: brew install evanpurkhiser/personal/keyfinder-cli
  */
 
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { access, constants } from 'node:fs/promises';
-import { getKeyInfo, type KeyInfo } from './keys.js';
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { access, constants } from 'node:fs/promises'
+import { getKeyInfo, type KeyInfo } from './keys.js'
 
-const execFileAsync = promisify(execFile);
+const execFileAsync = promisify(execFile)
 
 export interface KeyResult {
   /** Full key info (standard, camelot, openKey, short) or null if undetected. */
-  key: KeyInfo | null;
+  key: KeyInfo | null
   /** Raw output from keyfinder-cli. */
-  raw: string;
+  raw: string
 }
 
 /**
@@ -24,18 +24,17 @@ export interface KeyResult {
  */
 async function assertKeyfinderAvailable(): Promise<void> {
   try {
-    await execFileAsync('keyfinder-cli', [], { timeout: 5_000 });
+    await execFileAsync('keyfinder-cli', [], { timeout: 5_000 })
   } catch (err: unknown) {
     // keyfinder-cli prints usage to stderr and exits 1 when called with no args,
     // but that still means it's installed. Only fail if it's not found at all.
     const isNotFound =
       err instanceof Error &&
       'code' in err &&
-      (err as NodeJS.ErrnoException).code === 'ENOENT';
+      (err as NodeJS.ErrnoException).code === 'ENOENT'
 
     const isDylibError =
-      err instanceof Error &&
-      err.message.includes('Library not loaded');
+      err instanceof Error && err.message.includes('Library not loaded')
 
     if (isNotFound) {
       throw new Error(
@@ -44,7 +43,7 @@ async function assertKeyfinderAvailable(): Promise<void> {
           '  macOS:  brew install evanpurkhiser/personal/keyfinder-cli\n' +
           '  Linux:  build from source — https://github.com/evanpurkhiser/keyfinder-cli\n\n' +
           'See: https://github.com/evanpurkhiser/keyfinder-cli#building',
-      );
+      )
     }
 
     if (isDylibError) {
@@ -53,12 +52,12 @@ async function assertKeyfinderAvailable(): Promise<void> {
           'Fix it by rebuilding:\n' +
           '  brew upgrade evanpurkhiser/personal/keyfinder-cli\n\n' +
           'See: https://github.com/evanpurkhiser/keyfinder-cli',
-      );
+      )
     }
   }
 }
 
-let keyfinderChecked = false;
+let keyfinderChecked = false
 
 /**
  * Analyze the musical key of an audio file.
@@ -71,29 +70,29 @@ let keyfinderChecked = false;
  */
 export async function analyzeKey(filePath: string): Promise<KeyResult> {
   if (!keyfinderChecked) {
-    await assertKeyfinderAvailable();
-    keyfinderChecked = true;
+    await assertKeyfinderAvailable()
+    keyfinderChecked = true
   }
 
-  await access(filePath, constants.R_OK);
+  await access(filePath, constants.R_OK)
 
   // Use standard notation — keyfinder-cli outputs e.g. "Eb" for Eb major, "Dm" for D minor.
   const { stdout } = await execFileAsync('keyfinder-cli', [filePath], {
     timeout: 120_000,
-  });
+  })
 
-  const raw = stdout.trim();
+  const raw = stdout.trim()
 
   if (!raw) {
     // Silence or no detectable key
-    return { key: null, raw: '' };
+    return { key: null, raw: '' }
   }
 
   // keyfinder-cli outputs short forms like "A", "Eb", "Dm", "F#m"
   // "A" = A major, "Am" = A minor, "Eb" = Eb major, "Ebm" = Eb minor
-  const key = getKeyInfo(raw) ?? getKeyInfo(raw + 'maj');
+  const key = getKeyInfo(raw) ?? getKeyInfo(raw + 'maj')
 
-  return { key, raw };
+  return { key, raw }
 }
 
 /**
@@ -106,18 +105,18 @@ export async function batchAnalyzeKey(
   filePaths: string[],
   concurrency = 4,
 ): Promise<Map<string, KeyResult>> {
-  const results = new Map<string, KeyResult>();
-  const queue = [...filePaths];
+  const results = new Map<string, KeyResult>()
+  const queue = [...filePaths]
 
   async function worker(): Promise<void> {
     while (queue.length > 0) {
-      const fp = queue.shift();
-      if (!fp) break;
+      const fp = queue.shift()
+      if (!fp) break
       try {
-        const result = await analyzeKey(fp);
-        results.set(fp, result);
+        const result = await analyzeKey(fp)
+        results.set(fp, result)
       } catch {
-        results.set(fp, { key: null, raw: '' });
+        results.set(fp, { key: null, raw: '' })
       }
     }
   }
@@ -125,8 +124,8 @@ export async function batchAnalyzeKey(
   const workers = Array.from(
     { length: Math.min(concurrency, filePaths.length) },
     () => worker(),
-  );
-  await Promise.all(workers);
+  )
+  await Promise.all(workers)
 
-  return results;
+  return results
 }

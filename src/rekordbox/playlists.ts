@@ -6,17 +6,19 @@
  * transact the mutations themselves.
  */
 
-import { randomUUID } from 'node:crypto';
-import type { Database } from 'better-sqlite3-multiple-ciphers';
-import type { RbPlaylist, RbTrack } from './schema.js';
+import { randomUUID } from 'node:crypto'
+import type { Database } from 'better-sqlite3-multiple-ciphers'
+import type { RbPlaylist, RbTrack } from './schema.js'
 
 /**
  * Return all playlists (including playlist folders).
  */
 export function getPlaylists(db: Database): RbPlaylist[] {
   return db
-    .prepare('SELECT ID, Name, ParentID, Seq, Attribute FROM djmdPlaylist ORDER BY Seq')
-    .all() as RbPlaylist[];
+    .prepare(
+      'SELECT ID, Name, ParentID, Seq, Attribute FROM djmdPlaylist ORDER BY Seq',
+    )
+    .all() as RbPlaylist[]
 }
 
 /**
@@ -31,7 +33,7 @@ export function getPlaylistTracks(db: Database, playlistId: string): RbTrack[] {
        WHERE sp.PlaylistID = ?
        ORDER BY sp.TrackNo`,
     )
-    .all(playlistId) as RbTrack[];
+    .all(playlistId) as RbTrack[]
 
   return rows.map((row) => ({
     ...row,
@@ -39,7 +41,7 @@ export function getPlaylistTracks(db: Database, playlistId: string): RbTrack[] {
       row.FolderPath && row.FileNameL
         ? row.FolderPath + row.FileNameL
         : undefined,
-  }));
+  }))
 }
 
 /**
@@ -58,23 +60,16 @@ export function createPlaylist(
 ): { sql: string; params: unknown[] } {
   // Determine the next sequence number under the parent.
   const maxSeqRow = db
-    .prepare(
-      `SELECT MAX(Seq) AS maxSeq FROM djmdPlaylist WHERE ParentID = ?`,
-    )
-    .get(parentId ?? '0') as { maxSeq: number | null } | undefined;
+    .prepare(`SELECT MAX(Seq) AS maxSeq FROM djmdPlaylist WHERE ParentID = ?`)
+    .get(parentId ?? '0') as { maxSeq: number | null } | undefined
 
-  const nextSeq = (maxSeqRow?.maxSeq ?? 0) + 1;
+  const nextSeq = (maxSeqRow?.maxSeq ?? 0) + 1
 
   const sql = `INSERT INTO djmdPlaylist (ID, Name, ParentID, Seq, Attribute)
-               VALUES (?, ?, ?, ?, 1)`;
-  const params: unknown[] = [
-    randomUUID(),
-    name,
-    parentId ?? '0',
-    nextSeq,
-  ];
+               VALUES (?, ?, ?, ?, 1)`
+  const params: unknown[] = [randomUUID(), name, parentId ?? '0', nextSeq]
 
-  return { sql, params };
+  return { sql, params }
 }
 
 /**
@@ -93,21 +88,21 @@ export function addToPlaylist(
     .prepare(
       `SELECT MAX(TrackNo) AS maxNo FROM djmdSongPlaylist WHERE PlaylistID = ?`,
     )
-    .get(playlistId) as { maxNo: number | null } | undefined;
+    .get(playlistId) as { maxNo: number | null } | undefined
 
-  let nextNo = (maxRow?.maxNo ?? 0) + 1;
+  let nextNo = (maxRow?.maxNo ?? 0) + 1
 
-  const sqls: string[] = [];
-  const allParams: unknown[][] = [];
+  const sqls: string[] = []
+  const allParams: unknown[][] = []
 
   for (const contentId of contentIds) {
     sqls.push(
       `INSERT INTO djmdSongPlaylist (ID, ContentID, PlaylistID, TrackNo)
        VALUES (?, ?, ?, ?)`,
-    );
-    allParams.push([randomUUID(), contentId, playlistId, nextNo]);
-    nextNo++;
+    )
+    allParams.push([randomUUID(), contentId, playlistId, nextNo])
+    nextNo++
   }
 
-  return { sql: sqls, params: allParams };
+  return { sql: sqls, params: allParams }
 }
