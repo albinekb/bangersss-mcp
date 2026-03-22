@@ -122,8 +122,8 @@ export function registerIngestTools(
       depth: z
         .number()
         .optional()
-        .describe('Depth to scan subdirectories (default: 3)')
-        .default(3),
+        .describe('Depth to scan subdirectories (default: 1)')
+        .default(1),
       summaryOnly: z
         .boolean()
         .optional()
