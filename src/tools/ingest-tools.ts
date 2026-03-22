@@ -26,6 +26,7 @@ import { analyzeBpm } from '../audio/bpm-analyzer.js'
 import { getKeyInfo } from '../audio/keys.js'
 import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
 import { walkFiles } from '../util/walker/walker.js'
+import { createSamplePackFilter } from '../util/walker/sample-pack-detector.js'
 import {
   createRenameOp,
   createWriteTagsOp,
@@ -149,6 +150,13 @@ export function registerIngestTools(
         .optional()
         .default('1MB')
         .describe('Ignore files smaller than this size (e.g. "1MB", "500KB")'),
+      skipSamplePacks: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          'Skip folders detected as sample packs (synth presets, MIDI, many short files). Default: true.',
+        ),
       limit: z
         .number()
         .optional()
@@ -205,6 +213,7 @@ export function registerIngestTools(
       depth,
       summaryOnly,
       skipTags,
+      skipSamplePacks,
       groupBy,
       limit,
       offset,
@@ -214,12 +223,19 @@ export function registerIngestTools(
     }) => {
       try {
         // Walk the directory tree
+        const skippedFolders: Array<{ dir: string; signals: string[] }> = []
+        const filterResult = skipSamplePacks
+          ? createSamplePackFilter({
+              onSkip: (dir, signals) => skippedFolders.push({ dir, signals }),
+            })
+          : undefined
         const walkedFiles: Array<{ filePath: string }> = []
 
         for await (const { path: filePath } of walkFiles(dirPath, {
           recursive: depth > 0 ? true : false,
           maxLevel: depth > 0 ? depth : undefined,
           filterFile: (dirent) => isAudioFile(dirent.name),
+          filterResult,
         })) {
           walkedFiles.push({ filePath })
         }
@@ -307,6 +323,12 @@ export function registerIngestTools(
           totalSizeHuman: formatBytes(totalSize),
           formats: formatCounts,
           dateRange,
+          ...(skippedFolders.length > 0 && {
+            samplePacksSkipped: {
+              count: skippedFolders.length,
+              folders: skippedFolders,
+            },
+          }),
         }
 
         if (!skipTags) {
@@ -997,6 +1019,13 @@ export function registerIngestTools(
         .optional()
         .default(3)
         .describe('Max depth to scan subdirectories (default: 3)'),
+      skipSamplePacks: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          'Skip folders detected as sample packs (synth presets, MIDI, many short files). Default: true.',
+        ),
     },
     async ({
       incomingPath,
@@ -1005,15 +1034,23 @@ export function registerIngestTools(
       skipDuplicates,
       recursive,
       depth,
+      skipSamplePacks,
     }) => {
       try {
         // 1. Scan incoming
+        const skippedFolders: Array<{ dir: string; signals: string[] }> = []
+        const filterResult = skipSamplePacks
+          ? createSamplePackFilter({
+              onSkip: (dir, signals) => skippedFolders.push({ dir, signals }),
+            })
+          : undefined
         const incomingFiles: string[] = []
 
         for await (const { path: filePath } of walkFiles(incomingPath, {
           recursive,
           maxLevel: depth,
           filterFile: (dirent) => isAudioFile(dirent.name),
+          filterResult,
         })) {
           incomingFiles.push(filePath)
         }
@@ -1155,6 +1192,12 @@ export function registerIngestTools(
                     stagedForIngest: staged.length,
                     filesWithIssues: staged.filter((s) => s.issues.length > 0)
                       .length,
+                    ...(skippedFolders.length > 0 && {
+                      samplePacksSkipped: {
+                        count: skippedFolders.length,
+                        folders: skippedFolders,
+                      },
+                    }),
                   },
                   planId: plan.id,
                   planName: plan.name,

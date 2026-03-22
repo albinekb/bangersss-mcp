@@ -2,9 +2,9 @@ import type { Dirent } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-import type { FolderResult, WalkOptions } from './types.js'
+import type { FolderInspection, FolderResult, WalkOptions } from './types.js'
 
-export type { FolderResult, WalkOptions } from './types.js'
+export type { FolderInspection, FolderResult, WalkOptions } from './types.js'
 
 async function* emitFolder(
   dir: string,
@@ -12,7 +12,7 @@ async function* emitFolder(
   level: number,
 ): AsyncIterableIterator<FolderResult> {
   const resolvedDir = resolve(dir)
-  const { recursive = true, maxLevel, filterFile, filterFolder } = opts
+  const { recursive = true, maxLevel, filterFile, filterFolder, filterResult } = opts
 
   let dirents: Dirent[]
   try {
@@ -29,6 +29,12 @@ async function* emitFolder(
   })
 
   const folders = dirents.filter((d) => d.isDirectory())
+
+  if (filterResult) {
+    const allFiles = dirents.filter((d) => !d.isDirectory())
+    const keep = await filterResult({ dir: resolvedDir, files, folders, level, allFiles })
+    if (!keep) return
+  }
 
   yield { dir: resolvedDir, files, folders, level }
 
