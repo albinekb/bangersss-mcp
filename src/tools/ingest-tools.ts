@@ -19,7 +19,7 @@ import fg from 'fast-glob'
 import { readTags, batchReadTags, type TrackMetadata } from '../tags/tag-reader.js'
 import { analyzeBpm } from '../audio/bpm-analyzer.js'
 import { getKeyInfo } from '../audio/keys.js'
-import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
+import { isAudioFile, isSamplePackPath, SUPPORTED_FORMATS } from '../util/audio-formats.js'
 import { buildExtensionGlob } from '../util/glob-patterns.js'
 import {
   createRenameOp,
@@ -114,11 +114,9 @@ export function registerIngestTools(
       path: z
         .string()
         .describe('Absolute path to the incoming/downloads folder to scan'),
-      recursive: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe('Scan subdirectories'),
+      depth: z
+        .number().optional() .describe('Depth to scan subdirectories (default: 3)').default(3),
+
       summaryOnly: z
         .boolean()
         .optional()
@@ -156,6 +154,13 @@ export function registerIngestTools(
         .optional()
         .default('date')
         .describe('Sort order for file list (default: date, newest first)'),
+      excludeSamplePacks: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          'Skip files in sample pack / loop / DAW content folders (e.g. Splice, Ableton Packs, one-shots). Defaults to true.',
+        ),
       filter: z
         .object({
           artist: z
@@ -192,9 +197,10 @@ export function registerIngestTools(
     },
     async ({
       path: dirPath,
-      recursive,
+      depth,
       summaryOnly,
       skipTags,
+      excludeSamplePacks,
       groupBy,
       limit,
       offset,
@@ -205,6 +211,7 @@ export function registerIngestTools(
         const exts = [...SUPPORTED_FORMATS]
         const pattern = buildExtensionGlob(exts)
         const normDir = dirPath.replace(/\\/g, '/')
+        const recursive = depth > 0
         const fullPattern = recursive
           ? `${normDir}/**/${pattern}`
           : `${normDir}/${pattern}`
@@ -214,7 +221,21 @@ export function registerIngestTools(
           onlyFiles: true,
           followSymbolicLinks: false,
           stats: true,
+          deep: depth,
         })
+
+        // Filter out sample packs / loops / DAW content
+        let samplePacksExcluded = 0
+        const filteredFiles = excludeSamplePacks
+          ? files.filter((entry) => {
+              const filePath = typeof entry === 'string' ? entry : entry.path
+              if (isSamplePackPath(filePath)) {
+                samplePacksExcluded++
+                return false
+              }
+              return true
+            })
+          : files
 
         // Phase 1: Fast stat-based pass (no tag reading)
         const filePaths: string[] = []
@@ -228,7 +249,7 @@ export function registerIngestTools(
           modified: string
         }> = []
 
-        for (const entry of files) {
+        for (const entry of filteredFiles) {
           const filePath = typeof entry === 'string' ? entry : entry.path
           const stat =
             typeof entry !== 'string' && entry.stats
@@ -299,6 +320,7 @@ export function registerIngestTools(
           totalSizeHuman: formatBytes(totalSize),
           formats: formatCounts,
           dateRange,
+          ...(samplePacksExcluded > 0 && { samplePacksExcluded }),
         }
 
         if (!skipTags) {
@@ -984,6 +1006,13 @@ export function registerIngestTools(
         .optional()
         .default(true)
         .describe('Scan incoming folder recursively'),
+      excludeSamplePacks: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          'Skip files in sample pack / loop / DAW content folders. Defaults to true.',
+        ),
     },
     async ({
       incomingPath,
@@ -991,6 +1020,7 @@ export function registerIngestTools(
       organizationTemplate,
       skipDuplicates,
       recursive,
+      excludeSamplePacks,
     }) => {
       try {
         // 1. Scan incoming
@@ -1000,10 +1030,22 @@ export function registerIngestTools(
           ? `${incomingPath}/**/${pattern}`
           : `${incomingPath}/${pattern}`
 
-        const incomingFiles = await fg(fullPattern, {
+        const allIncomingFiles = await fg(fullPattern, {
           absolute: true,
           onlyFiles: true,
         })
+
+        // Filter out sample packs / loops / DAW content
+        let samplePacksExcluded = 0
+        const incomingFiles = excludeSamplePacks
+          ? allIncomingFiles.filter((f) => {
+              if (isSamplePackPath(f)) {
+                samplePacksExcluded++
+                return false
+              }
+              return true
+            })
+          : allIncomingFiles
 
         if (incomingFiles.length === 0) {
           return {
@@ -1135,7 +1177,8 @@ export function registerIngestTools(
               text: JSON.stringify(
                 {
                   summary: {
-                    scanned: incomingFiles.length,
+                    scanned: allIncomingFiles.length,
+                    ...(samplePacksExcluded > 0 && { samplePacksExcluded }),
                     duplicatesSkipped: duplicatePaths.size,
                     stagedForIngest: staged.length,
                     filesWithIssues: staged.filter((s) => s.issues.length > 0)
