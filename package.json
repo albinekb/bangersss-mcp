@@ -43,7 +43,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3-multiple-ciphers": "^12.8.0",
+    "bytes": "^3.1.2",
     "fast-glob": "^3.3.3",
+    "fs-iterator": "^7.1.1",
     "memfs": "^4.57.1",
     "music-metadata": "^11.12.3",
     "nanoid": "^5.1.7",
@@ -53,13 +55,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^22.15.2",
+    "@types/bytes": "^3.1.5",
+    "@types/node": "^25.5.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }

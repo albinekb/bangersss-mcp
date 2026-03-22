@@ -26,6 +26,7 @@ export function isAudioFile(path: string): boolean {
   return ext !== null
 }
 
+
 /**
  * Returns the lowercase extension (including the dot) if it is a supported
  * audio format, or `null` otherwise.
