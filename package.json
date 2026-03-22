@@ -44,6 +44,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3-multiple-ciphers": "^12.8.0",
     "fast-glob": "^3.3.3",
+    "fs-iterator": "^7.1.1",
     "memfs": "^4.57.1",
     "music-metadata": "^11.12.3",
     "nanoid": "^5.1.7",

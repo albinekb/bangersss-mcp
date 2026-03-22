@@ -19,8 +19,8 @@ import fg from 'fast-glob'
 import { readTags, batchReadTags, type TrackMetadata } from '../tags/tag-reader.js'
 import { analyzeBpm } from '../audio/bpm-analyzer.js'
 import { getKeyInfo } from '../audio/keys.js'
-import { isAudioFile, isSamplePackPath, SUPPORTED_FORMATS } from '../util/audio-formats.js'
-import { buildExtensionGlob } from '../util/glob-patterns.js'
+import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
+import { walkFiles } from '../util/walker/walker.js'
 import {
   createRenameOp,
   createWriteTagsOp,
@@ -115,8 +115,10 @@ export function registerIngestTools(
         .string()
         .describe('Absolute path to the incoming/downloads folder to scan'),
       depth: z
-        .number().optional() .describe('Depth to scan subdirectories (default: 3)').default(3),
-
+        .number()
+        .optional()
+        .describe('Depth to scan subdirectories (default: 3)')
+        .default(3),
       summaryOnly: z
         .boolean()
         .optional()
@@ -154,13 +156,6 @@ export function registerIngestTools(
         .optional()
         .default('date')
         .describe('Sort order for file list (default: date, newest first)'),
-      excludeSamplePacks: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe(
-          'Skip files in sample pack / loop / DAW content folders (e.g. Splice, Ableton Packs, one-shots). Defaults to true.',
-        ),
       filter: z
         .object({
           artist: z
@@ -200,7 +195,6 @@ export function registerIngestTools(
       depth,
       summaryOnly,
       skipTags,
-      excludeSamplePacks,
       groupBy,
       limit,
       offset,
@@ -208,34 +202,16 @@ export function registerIngestTools(
       filter,
     }) => {
       try {
-        const exts = [...SUPPORTED_FORMATS]
-        const pattern = buildExtensionGlob(exts)
-        const normDir = dirPath.replace(/\\/g, '/')
-        const recursive = depth > 0
-        const fullPattern = recursive
-          ? `${normDir}/**/${pattern}`
-          : `${normDir}/${pattern}`
+        // Walk the directory tree
+        const walkedFiles: Array<{ filePath: string }> = []
 
-        const files = await fg(fullPattern, {
-          absolute: true,
-          onlyFiles: true,
-          followSymbolicLinks: false,
-          stats: true,
-          deep: depth,
-        })
-
-        // Filter out sample packs / loops / DAW content
-        let samplePacksExcluded = 0
-        const filteredFiles = excludeSamplePacks
-          ? files.filter((entry) => {
-              const filePath = typeof entry === 'string' ? entry : entry.path
-              if (isSamplePackPath(filePath)) {
-                samplePacksExcluded++
-                return false
-              }
-              return true
-            })
-          : files
+        for await (const { path: filePath } of walkFiles(dirPath, {
+          recursive: depth > 0 ? true : false,
+          maxLevel: depth > 0 ? depth : undefined,
+          filterFile: (dirent) => isAudioFile(dirent.name),
+        })) {
+          walkedFiles.push({ filePath })
+        }
 
         // Phase 1: Fast stat-based pass (no tag reading)
         const filePaths: string[] = []
@@ -249,12 +225,8 @@ export function registerIngestTools(
           modified: string
         }> = []
 
-        for (const entry of filteredFiles) {
-          const filePath = typeof entry === 'string' ? entry : entry.path
-          const stat =
-            typeof entry !== 'string' && entry.stats
-              ? entry.stats
-              : await fs.stat(filePath)
+        for (const { filePath } of walkedFiles) {
+          const stat = await fs.stat(filePath)
           const ext = path.extname(filePath).toLowerCase()
           formatCounts[ext] = (formatCounts[ext] ?? 0) + 1
           totalSize += stat.size
@@ -320,7 +292,6 @@ export function registerIngestTools(
           totalSizeHuman: formatBytes(totalSize),
           formats: formatCounts,
           dateRange,
-          ...(samplePacksExcluded > 0 && { samplePacksExcluded }),
         }
 
         if (!skipTags) {
@@ -1006,13 +977,11 @@ export function registerIngestTools(
         .optional()
         .default(true)
         .describe('Scan incoming folder recursively'),
-      excludeSamplePacks: z
-        .boolean()
+      depth: z
+        .number()
         .optional()
-        .default(true)
-        .describe(
-          'Skip files in sample pack / loop / DAW content folders. Defaults to true.',
-        ),
+        .default(3)
+        .describe('Max depth to scan subdirectories (default: 3)'),
     },
     async ({
       incomingPath,
@@ -1020,32 +989,19 @@ export function registerIngestTools(
       organizationTemplate,
       skipDuplicates,
       recursive,
-      excludeSamplePacks,
+      depth,
     }) => {
       try {
         // 1. Scan incoming
-        const exts = [...SUPPORTED_FORMATS]
-        const pattern = `*{${exts.join(',')}}`
-        const fullPattern = recursive
-          ? `${incomingPath}/**/${pattern}`
-          : `${incomingPath}/${pattern}`
+        const incomingFiles: string[] = []
 
-        const allIncomingFiles = await fg(fullPattern, {
-          absolute: true,
-          onlyFiles: true,
-        })
-
-        // Filter out sample packs / loops / DAW content
-        let samplePacksExcluded = 0
-        const incomingFiles = excludeSamplePacks
-          ? allIncomingFiles.filter((f) => {
-              if (isSamplePackPath(f)) {
-                samplePacksExcluded++
-                return false
-              }
-              return true
-            })
-          : allIncomingFiles
+        for await (const { path: filePath } of walkFiles(incomingPath, {
+          recursive,
+          maxLevel: depth,
+          filterFile: (dirent) => isAudioFile(dirent.name),
+        })) {
+          incomingFiles.push(filePath)
+        }
 
         if (incomingFiles.length === 0) {
           return {
@@ -1106,7 +1062,9 @@ export function registerIngestTools(
           }
 
           const tagIndex = new Map<string, string>()
-          const libTagMap = await batchReadTags(libraryFiles, { concurrency: 8 })
+          const libTagMap = await batchReadTags(libraryFiles, {
+            concurrency: 8,
+          })
           for (const [libFile, libTags] of libTagMap) {
             if (libTags.artist && libTags.title) {
               tagIndex.set(
@@ -1177,8 +1135,7 @@ export function registerIngestTools(
               text: JSON.stringify(
                 {
                   summary: {
-                    scanned: allIncomingFiles.length,
-                    ...(samplePacksExcluded > 0 && { samplePacksExcluded }),
+                    scanned: incomingFiles.length,
                     duplicatesSkipped: duplicatePaths.size,
                     stagedForIngest: staged.length,
                     filesWithIssues: staged.filter((s) => s.issues.length > 0)
