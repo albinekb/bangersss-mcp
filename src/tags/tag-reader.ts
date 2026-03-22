@@ -26,7 +26,7 @@ export interface TrackMetadata {
  * @returns Parsed metadata.
  */
 export async function readTags(filePath: string): Promise<TrackMetadata> {
-  const metadata = await parseFile(filePath)
+  const metadata = await parseFile(filePath, { skipCovers: true })
 
   const { common, format } = metadata
 
@@ -53,26 +53,42 @@ export async function readTags(filePath: string): Promise<TrackMetadata> {
 }
 
 /**
- * Read tags for multiple files. Failures for individual files are silently
- * skipped (the file will be absent from the returned map).
+ * Read tags for multiple files with concurrency-limited parallelism.
+ * Failures for individual files are silently skipped (the file will be
+ * absent from the returned map).
  *
- * @param filePaths  Absolute paths to audio files.
+ * @param filePaths    Absolute paths to audio files.
+ * @param options.concurrency  Max parallel reads (default 8).
  * @returns Map from file path to parsed metadata.
  */
 export async function batchReadTags(
   filePaths: string[],
+  options?: { concurrency?: number },
 ): Promise<Map<string, TrackMetadata>> {
   const results = new Map<string, TrackMetadata>()
 
-  const tasks = filePaths.map(async (fp) => {
-    try {
-      const tags = await readTags(fp)
-      results.set(fp, tags)
-    } catch {
-      // Skip files that fail to parse.
-    }
-  })
+  if (filePaths.length === 0) return results
 
-  await Promise.all(tasks)
+  const concurrency = options?.concurrency ?? 8
+  let nextIndex = 0
+
+  async function worker(): Promise<void> {
+    while (nextIndex < filePaths.length) {
+      const idx = nextIndex++
+      const fp = filePaths[idx]
+      try {
+        const tags = await readTags(fp)
+        results.set(fp, tags)
+      } catch {
+        // Skip files that fail to parse.
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, filePaths.length) }, () =>
+      worker(),
+    ),
+  )
   return results
 }

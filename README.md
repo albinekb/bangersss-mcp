@@ -64,7 +64,9 @@ npm install
 npm run build
 ```
 
-## Usage with Claude Code
+## Setup
+
+### Claude Code
 
 Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.claude/settings.json`):
 
@@ -91,9 +93,54 @@ Or if installed globally / from source:
 }
 ```
 
-## Usage with Claude Desktop
+### Claude Desktop
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "bangersss-mcp": {
+      "command": "npx",
+      "args": ["-y", "bangersss-mcp"]
+    }
+  }
+}
+```
+
+### VS Code / GitHub Copilot
+
+Add to `.vscode/mcp.json` in your project (requires VS Code 1.99+):
+
+```json
+{
+  "servers": {
+    "bangersss-mcp": {
+      "command": "npx",
+      "args": ["-y", "bangersss-mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project, or `~/.cursor/mcp.json` for global access:
+
+```json
+{
+  "mcpServers": {
+    "bangersss-mcp": {
+      "command": "npx",
+      "args": ["-y", "bangersss-mcp"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
