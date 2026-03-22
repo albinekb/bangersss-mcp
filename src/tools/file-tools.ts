@@ -1,9 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as path from 'node:path';
-import fg from 'fast-glob';
-import { readTags } from '../tags/tag-reader.js';
-import { isAudioFile } from '../util/audio-formats.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import * as path from 'node:path'
+import fg from 'fast-glob'
+import { readTags } from '../tags/tag-reader.js'
+import { isAudioFile } from '../util/audio-formats.js'
 import { normalizeGlobPattern } from '../util/glob-patterns.js'
 import type { ServerContext } from '../server.js'
 
@@ -328,5 +328,5 @@ function sanitizeFilename(name: string): string {
   return name
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
 }

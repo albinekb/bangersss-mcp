@@ -2,16 +2,16 @@
  * Rekordbox track queries.
  */
 
-import type { Database } from 'better-sqlite3-multiple-ciphers';
-import type { RbTrack } from './schema.js';
+import type { Database } from 'better-sqlite3-multiple-ciphers'
+import type { RbTrack } from './schema.js'
 
 export interface RbTrackQuery {
-  artist?: string;
-  title?: string;
-  genre?: string;
-  bpmRange?: { min: number; max: number };
-  key?: number;
-  rating?: number;
+  artist?: string
+  title?: string
+  genre?: string
+  bpmRange?: { min: number; max: number }
+  key?: number
+  rating?: number
 }
 
 /**
@@ -21,41 +21,41 @@ export interface RbTrackQuery {
  * work against resolved names rather than opaque IDs.
  */
 export function searchTracks(db: Database, query: RbTrackQuery): RbTrack[] {
-  const conditions: string[] = [];
-  const params: Record<string, unknown> = {};
+  const conditions: string[] = []
+  const params: Record<string, unknown> = {}
 
   if (query.title) {
-    conditions.push('c.Title LIKE :title');
-    params.title = `%${query.title}%`;
+    conditions.push('c.Title LIKE :title')
+    params.title = `%${query.title}%`
   }
 
   if (query.artist) {
-    conditions.push('a.Name LIKE :artist');
-    params.artist = `%${query.artist}%`;
+    conditions.push('a.Name LIKE :artist')
+    params.artist = `%${query.artist}%`
   }
 
   if (query.genre) {
-    conditions.push('g.Name LIKE :genre');
-    params.genre = `%${query.genre}%`;
+    conditions.push('g.Name LIKE :genre')
+    params.genre = `%${query.genre}%`
   }
 
   if (query.bpmRange) {
-    conditions.push('c.BPM >= :bpmMin AND c.BPM <= :bpmMax');
-    params.bpmMin = query.bpmRange.min;
-    params.bpmMax = query.bpmRange.max;
+    conditions.push('c.BPM >= :bpmMin AND c.BPM <= :bpmMax')
+    params.bpmMin = query.bpmRange.min
+    params.bpmMax = query.bpmRange.max
   }
 
   if (query.key !== undefined) {
-    conditions.push('c.Key = :key');
-    params.key = query.key;
+    conditions.push('c.Key = :key')
+    params.key = query.key
   }
 
   if (query.rating !== undefined) {
-    conditions.push('c.Rating = :rating');
-    params.rating = query.rating;
+    conditions.push('c.Rating = :rating')
+    params.rating = query.rating
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   const sql = `
     SELECT
@@ -70,9 +70,9 @@ export function searchTracks(db: Database, query: RbTrackQuery): RbTrack[] {
     LEFT JOIN djmdGenre g ON c.GenreID = g.ID
     ${where}
     ORDER BY c.Title
-  `;
+  `
 
-  const rows = db.prepare(sql).all(params) as RbTrack[];
+  const rows = db.prepare(sql).all(params) as RbTrack[]
 
   return rows.map((row) => ({
     ...row,
@@ -80,20 +80,18 @@ export function searchTracks(db: Database, query: RbTrackQuery): RbTrack[] {
       row.FolderPath && row.FileNameL
         ? row.FolderPath + row.FileNameL
         : undefined,
-  }));
+  }))
 }
 
 /**
  * Retrieve a single track by its Rekordbox content ID.
  */
 export function getTrack(db: Database, id: string): RbTrack | null {
-  const row = db
-    .prepare(
-      `SELECT * FROM djmdContent WHERE ID = ?`,
-    )
-    .get(id) as RbTrack | undefined;
+  const row = db.prepare(`SELECT * FROM djmdContent WHERE ID = ?`).get(id) as
+    | RbTrack
+    | undefined
 
-  if (!row) return null;
+  if (!row) return null
 
   return {
     ...row,
@@ -101,7 +99,7 @@ export function getTrack(db: Database, id: string): RbTrack | null {
       row.FolderPath && row.FileNameL
         ? row.FolderPath + row.FileNameL
         : undefined,
-  };
+  }
 }
 
 /**
@@ -112,12 +110,10 @@ export function getTrack(db: Database, id: string): RbTrack | null {
  */
 export function getTrackByPath(db: Database, path: string): RbTrack | null {
   const row = db
-    .prepare(
-      `SELECT * FROM djmdContent WHERE (FolderPath || FileNameL) = ?`,
-    )
-    .get(path) as RbTrack | undefined;
+    .prepare(`SELECT * FROM djmdContent WHERE (FolderPath || FileNameL) = ?`)
+    .get(path) as RbTrack | undefined
 
-  if (!row) return null;
+  if (!row) return null
 
   return {
     ...row,
@@ -125,5 +121,5 @@ export function getTrackByPath(db: Database, path: string): RbTrack | null {
       row.FolderPath && row.FileNameL
         ? row.FolderPath + row.FileNameL
         : undefined,
-  };
+  }
 }

@@ -1,12 +1,18 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import { parseM3U } from '../playlists/m3u.js';
-import type { PlaylistTrack } from '../playlists/types.js';
-import type { ServerContext } from '../server.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import { parseM3U } from '../playlists/m3u.js'
+import type { PlaylistTrack } from '../playlists/types.js'
+import type { ServerContext } from '../server.js'
 
-function formatPlaylist(playlist: { name: string; format: string; tracks: PlaylistTrack[]; createdAt: Date; updatedAt: Date }) {
+function formatPlaylist(playlist: {
+  name: string
+  format: string
+  tracks: PlaylistTrack[]
+  createdAt: Date
+  updatedAt: Date
+}) {
   return {
     name: playlist.name,
     format: playlist.format,
@@ -19,44 +25,70 @@ function formatPlaylist(playlist: { name: string; format: string; tracks: Playli
     })),
     createdAt: playlist.createdAt.toISOString(),
     updatedAt: playlist.updatedAt.toISOString(),
-  };
+  }
 }
 
-export function registerPlaylistTools(server: McpServer, context: ServerContext): void {
+export function registerPlaylistTools(
+  server: McpServer,
+  context: ServerContext,
+): void {
   server.tool(
     'create_playlist',
     'Create a new in-memory playlist, optionally pre-populated with tracks.',
     {
       name: z.string().describe('Playlist name'),
-      format: z.enum(['m3u', 'm3u8']).optional().default('m3u8').describe('Playlist format'),
-      tracks: z.array(z.string()).optional().default([]).describe('Initial track file paths'),
+      format: z
+        .enum(['m3u', 'm3u8'])
+        .optional()
+        .default('m3u8')
+        .describe('Playlist format'),
+      tracks: z
+        .array(z.string())
+        .optional()
+        .default([])
+        .describe('Initial track file paths'),
     },
     async ({ name, format, tracks }) => {
       try {
         const trackEntries: PlaylistTrack[] = tracks.map((p) => ({
           path: p,
           title: path.basename(p, path.extname(p)),
-        }));
+        }))
 
-        const playlist = context.playlistManager.createPlaylist(name, format, trackEntries);
+        const playlist = context.playlistManager.createPlaylist(
+          name,
+          format,
+          trackEntries,
+        )
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              created: true,
-              playlist: formatPlaylist(playlist),
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  created: true,
+                  playlist: formatPlaylist(playlist),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error creating playlist: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error creating playlist: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 
   server.tool(
     'add_to_playlist',
@@ -70,28 +102,39 @@ export function registerPlaylistTools(server: McpServer, context: ServerContext)
         const trackEntries: PlaylistTrack[] = tracks.map((p) => ({
           path: p,
           title: path.basename(p, path.extname(p)),
-        }));
+        }))
 
-        context.playlistManager.addTracks(name, trackEntries);
-        const playlist = context.playlistManager.getPlaylist(name);
+        context.playlistManager.addTracks(name, trackEntries)
+        const playlist = context.playlistManager.getPlaylist(name)
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              added: tracks.length,
-              playlist: formatPlaylist(playlist),
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  added: tracks.length,
+                  playlist: formatPlaylist(playlist),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error adding to playlist: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error adding to playlist: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 
   server.tool(
     'remove_from_playlist',
@@ -102,26 +145,37 @@ export function registerPlaylistTools(server: McpServer, context: ServerContext)
     },
     async ({ name, tracks }) => {
       try {
-        context.playlistManager.removeTracks(name, tracks);
-        const playlist = context.playlistManager.getPlaylist(name);
+        context.playlistManager.removeTracks(name, tracks)
+        const playlist = context.playlistManager.getPlaylist(name)
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              removed: tracks.length,
-              playlist: formatPlaylist(playlist),
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  removed: tracks.length,
+                  playlist: formatPlaylist(playlist),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error removing from playlist: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error removing from playlist: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 
   server.tool(
     'read_playlist',
@@ -131,33 +185,44 @@ export function registerPlaylistTools(server: McpServer, context: ServerContext)
     },
     async ({ path: filePath }) => {
       try {
-        const content = await fs.readFile(filePath, 'utf-8');
-        const basePath = path.dirname(filePath);
-        const tracks = parseM3U(content, basePath);
+        const content = await fs.readFile(filePath, 'utf-8')
+        const basePath = path.dirname(filePath)
+        const tracks = parseM3U(content, basePath)
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              path: filePath,
-              trackCount: tracks.length,
-              tracks: tracks.map((t) => ({
-                path: t.path,
-                title: t.title,
-                artist: t.artist,
-                duration: t.duration,
-              })),
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  path: filePath,
+                  trackCount: tracks.length,
+                  tracks: tracks.map((t) => ({
+                    path: t.path,
+                    title: t.title,
+                    artist: t.artist,
+                    duration: t.duration,
+                  })),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error reading playlist: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error reading playlist: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 
   server.tool(
     'list_playlists',
@@ -165,25 +230,36 @@ export function registerPlaylistTools(server: McpServer, context: ServerContext)
     {},
     async () => {
       try {
-        const playlists = context.playlistManager.listPlaylists();
+        const playlists = context.playlistManager.listPlaylists()
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              totalPlaylists: playlists.length,
-              playlists: playlists.map(formatPlaylist),
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  totalPlaylists: playlists.length,
+                  playlists: playlists.map(formatPlaylist),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error listing playlists: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error listing playlists: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 
   server.tool(
     'export_playlist',
@@ -194,24 +270,35 @@ export function registerPlaylistTools(server: McpServer, context: ServerContext)
     },
     async ({ name, outputPath }) => {
       try {
-        await context.playlistManager.exportPlaylist(name, outputPath);
+        await context.playlistManager.exportPlaylist(name, outputPath)
 
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify({
-              exported: true,
-              playlistName: name,
-              outputPath,
-            }, null, 2),
-          }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  exported: true,
+                  playlistName: name,
+                  outputPath,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err)
         return {
-          content: [{ type: 'text' as const, text: `Error exporting playlist: ${message}` }],
-        };
+          content: [
+            {
+              type: 'text' as const,
+              text: `Error exporting playlist: ${message}`,
+            },
+          ],
+        }
       }
     },
-  );
+  )
 }

@@ -1,424 +1,695 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bangersss — AI-powered music library management for DJs</title>
-  <meta name="description" content="AI-powered music library organization for DJs. Safe, smart, and reversible. Supports Rekordbox, Engine DJ, BPM analysis, key detection, and more.">
-  <meta property="og:title" content="Bangersss">
-  <meta property="og:description" content="AI-powered music library organization for DJs — safe, smart, and reversible.">
-  <meta property="og:type" content="website">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-<!-- Nav -->
-<nav>
-  <div class="inner">
-    <a href="#" class="logo">bangersss-mcp</a>
-    <div class="links">
-      <a href="#features">Features</a>
-      <a href="#how-it-works">How it works</a>
-      <a href="#tools">Tools</a>
-      <a href="#install">Install</a>
-      <a href="https://github.com/albinekb/bangersss-mcp" class="gh">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        GitHub
-      </a>
-    </div>
-  </div>
-</nav>
-
-<!-- Hero -->
-<section class="hero">
-  <div class="hero-left">
-    <div class="hero-logo">
-      <!-- Crate logo -->
-      <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-        <rect x="8" y="28" width="64" height="44" rx="4" stroke="#e5a800" stroke-width="2.5" fill="rgba(229,168,0,0.06)"/>
-        <rect x="14" y="34" width="52" height="32" rx="2" fill="rgba(229,168,0,0.04)"/>
-        <line x1="20" y1="34" x2="20" y2="66" stroke="#e5a800" stroke-width="1.5" opacity="0.5"/>
-        <line x1="32" y1="34" x2="32" y2="66" stroke="#e5a800" stroke-width="1.5" opacity="0.5"/>
-        <line x1="44" y1="34" x2="44" y2="66" stroke="#e5a800" stroke-width="1.5" opacity="0.5"/>
-        <line x1="56" y1="34" x2="56" y2="66" stroke="#e5a800" stroke-width="1.5" opacity="0.5"/>
-        <!-- Vinyl peeking out -->
-        <circle cx="40" cy="26" r="18" stroke="#e5a800" stroke-width="2" fill="rgba(229,168,0,0.08)"/>
-        <circle cx="40" cy="26" r="12" stroke="#e5a800" stroke-width="1" opacity="0.4" fill="none"/>
-        <circle cx="40" cy="26" r="6" stroke="#e5a800" stroke-width="1" opacity="0.3" fill="none"/>
-        <circle cx="40" cy="26" r="2.5" fill="#e5a800" opacity="0.6"/>
-      </svg>
-      <h1>bangersss-mcp</h1>
-    </div>
-    <p class="tagline">AI-powered music library organization for DJs &mdash; safe, smart, and reversible.</p>
-
-    <div class="feature-grid" id="features">
-      <div class="feature-card">
-        <div class="icon">
-          <svg fill="none" stroke="#e5a800" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bangersss — AI-powered music library management for DJs</title>
+    <meta
+      name="description"
+      content="AI-powered music library organization for DJs. Safe, smart, and reversible. Supports Rekordbox, Engine DJ, BPM analysis, key detection, and more."
+    />
+    <meta property="og:title" content="Bangersss" />
+    <meta
+      property="og:description"
+      content="AI-powered music library organization for DJs — safe, smart, and reversible."
+    />
+    <meta property="og:type" content="website" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Nav -->
+    <nav>
+      <div class="inner">
+        <a href="#" class="logo">bangersss-mcp</a>
+        <div class="links">
+          <a href="#features">Features</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#tools">Tools</a>
+          <a href="#install">Install</a>
+          <a href="https://github.com/albinekb/bangersss-mcp" class="gh">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+            GitHub
+          </a>
         </div>
-        <h3>Dry Mode by Default</h3>
-        <p>All changes staged in a safe overlay. Review before you commit.</p>
       </div>
-      <div class="feature-card">
-        <div class="icon">
-          <svg fill="none" stroke="#e5a800" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        </div>
-        <h3>Plans & Workflows</h3>
-        <p>Export, share, and resume operation plans for any library task.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">
-          <svg fill="none" stroke="#e5a800" stroke-width="2" viewBox="0 0 24 24"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
-        </div>
-        <h3>BPM & Key Analysis</h3>
-        <p>Detect BPM and musical key from audio. Camelot wheel compatibility for harmonic mixing.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">
-          <svg fill="none" stroke="#e5a800" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        </div>
-        <h3>Rekordbox & Engine DJ</h3>
-        <p>Search, sync, and manage playlists, cues, and crates.</p>
-      </div>
-    </div>
+    </nav>
 
-    <div class="command-bar">
-      <span class="prompt">$</span>
-      <span class="cmd">bangersss-mcp</span>
-      <span class="args">ingest ~/Downloads/Music</span>
-      <span class="arrow">&rarr;</span>
-      <span class="args">~/Music/DJ Library</span>
-    </div>
-  </div>
-
-  <div class="hero-right">
-    <div class="mock-ui">
-      <div class="mock-window">
-        <!-- Title bar -->
-        <div class="mock-titlebar">
-          <div class="mock-dot red"></div>
-          <div class="mock-dot yellow"></div>
-          <div class="mock-dot green"></div>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-left">
+        <div class="hero-logo">
+          <!-- Crate logo -->
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+            <rect
+              x="8"
+              y="28"
+              width="64"
+              height="44"
+              rx="4"
+              stroke="#e5a800"
+              stroke-width="2.5"
+              fill="rgba(229,168,0,0.06)"
+            />
+            <rect
+              x="14"
+              y="34"
+              width="52"
+              height="32"
+              rx="2"
+              fill="rgba(229,168,0,0.04)"
+            />
+            <line
+              x1="20"
+              y1="34"
+              x2="20"
+              y2="66"
+              stroke="#e5a800"
+              stroke-width="1.5"
+              opacity="0.5"
+            />
+            <line
+              x1="32"
+              y1="34"
+              x2="32"
+              y2="66"
+              stroke="#e5a800"
+              stroke-width="1.5"
+              opacity="0.5"
+            />
+            <line
+              x1="44"
+              y1="34"
+              x2="44"
+              y2="66"
+              stroke="#e5a800"
+              stroke-width="1.5"
+              opacity="0.5"
+            />
+            <line
+              x1="56"
+              y1="34"
+              x2="56"
+              y2="66"
+              stroke="#e5a800"
+              stroke-width="1.5"
+              opacity="0.5"
+            />
+            <!-- Vinyl peeking out -->
+            <circle
+              cx="40"
+              cy="26"
+              r="18"
+              stroke="#e5a800"
+              stroke-width="2"
+              fill="rgba(229,168,0,0.08)"
+            />
+            <circle
+              cx="40"
+              cy="26"
+              r="12"
+              stroke="#e5a800"
+              stroke-width="1"
+              opacity="0.4"
+              fill="none"
+            />
+            <circle
+              cx="40"
+              cy="26"
+              r="6"
+              stroke="#e5a800"
+              stroke-width="1"
+              opacity="0.3"
+              fill="none"
+            />
+            <circle cx="40" cy="26" r="2.5" fill="#e5a800" opacity="0.6" />
+          </svg>
+          <h1>bangersss-mcp</h1>
         </div>
+        <p class="tagline">
+          AI-powered music library organization for DJs &mdash; safe, smart, and
+          reversible.
+        </p>
 
-        <!-- Waveform -->
-        <div class="mock-waveform" id="waveform"></div>
-
-        <!-- Pending changes -->
-        <div class="mock-section">
-          <div class="mock-section-header">
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <h4>Plan: Organize Summer Set</h4>
-              <span class="mock-badge">Dry Mode</span>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-            <span style="font-size:0.78rem;font-weight:600;">Pending Changes</span>
-            <span class="mock-count">(47)</span>
-          </div>
-          <div class="change-row">
-            <div class="check"></div>
-            <span class="op">move</span>
-            <span class="from">track01.mp3</span>
-            <span class="arrow-sm">&rarr;</span>
-            <span class="to">House/DJ Snake/Turn Down for What.mp3</span>
-          </div>
-          <div class="change-row">
-            <div class="check"></div>
-            <span class="op">move</span>
-            <span class="from">track02.flac</span>
-            <span class="arrow-sm">&rarr;</span>
-            <span class="to">Techno/Charlotte de Witte/Overdrive.flac</span>
-          </div>
-          <div class="change-row">
-            <div class="check"></div>
-            <span class="op">rename</span>
-            <span class="from">AUDIO_003.wav</span>
-            <span class="arrow-sm">&rarr;</span>
-            <span class="to">Acid Jazz/Artist - Track 03.wav</span>
-          </div>
-          <div class="change-row">
-            <div class="check"></div>
-            <span class="op">tags</span>
-            <span class="from">song.mp3</span>
-            <span class="arrow-sm">&rarr;</span>
-            <span class="to">Add BPM: 128, Key: 8B, Genre: House</span>
-          </div>
-          <div class="mock-buttons">
-            <div class="mock-btn mock-btn-green">Commit Changes</div>
-            <div class="mock-btn mock-btn-ghost">Discard All</div>
-          </div>
-        </div>
-
-        <!-- BPM & Key -->
-        <div class="mock-bpm-key">
-          <div class="bpm-display">
-            <div class="label">BPM</div>
-            <div class="value">128<span class="decimal">.4</span></div>
-          </div>
-          <div class="key-display">
-            <div class="label">Key</div>
-            <div class="camelot-wheel">
-              <svg viewBox="0 0 100 100">
-                <!-- Outer ring segments -->
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#232328" stroke-width="14"/>
-                <!-- Highlight segment -->
-                <path d="M50 8 A42 42 0 0 1 86.3 29" fill="none" stroke="#e5a800" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
-                <!-- Inner ring -->
-                <circle cx="50" cy="50" r="28" fill="none" stroke="#1a1a1e" stroke-width="10"/>
-                <path d="M50 22 A28 28 0 0 1 74.2 36" fill="none" stroke="#a07500" stroke-width="10" stroke-linecap="round" opacity="0.6"/>
-                <!-- Labels -->
-                <text x="73" y="18" fill="#e5a800" font-size="8" font-weight="700" font-family="Inter, sans-serif">8B</text>
-                <text x="88" y="42" fill="#7a7a88" font-size="6" font-weight="600" font-family="Inter, sans-serif">9B</text>
-                <text x="85" y="68" fill="#7a7a88" font-size="6" font-weight="600" font-family="Inter, sans-serif">10B</text>
-                <text x="58" y="14" fill="#7a7a88" font-size="6" font-weight="600" font-family="Inter, sans-serif">7A</text>
-                <text x="10" y="42" fill="#7a7a88" font-size="6" font-weight="600" font-family="Inter, sans-serif">3A</text>
-                <text x="35" y="14" fill="#7a7a88" font-size="6" font-weight="600" font-family="Inter, sans-serif">6B</text>
-                <!-- Center -->
-                <text x="50" y="53" fill="#e5a800" font-size="11" font-weight="800" text-anchor="middle" font-family="Inter, sans-serif">8B</text>
-                <text x="50" y="62" fill="#7a7a88" font-size="5" text-anchor="middle" font-family="Inter, sans-serif">Camelot</text>
+        <div class="feature-grid" id="features">
+          <div class="feature-card">
+            <div class="icon">
+              <svg
+                fill="none"
+                stroke="#e5a800"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </div>
+            <h3>Dry Mode by Default</h3>
+            <p>
+              All changes staged in a safe overlay. Review before you commit.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">
+              <svg
+                fill="none"
+                stroke="#e5a800"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </div>
+            <h3>Plans & Workflows</h3>
+            <p>
+              Export, share, and resume operation plans for any library task.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">
+              <svg
+                fill="none"
+                stroke="#e5a800"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M2 12h4l3-9 6 18 3-9h4" />
+              </svg>
+            </div>
+            <h3>BPM & Key Analysis</h3>
+            <p>
+              Detect BPM and musical key from audio. Camelot wheel compatibility
+              for harmonic mixing.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">
+              <svg
+                fill="none"
+                stroke="#e5a800"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            </div>
+            <h3>Rekordbox & Engine DJ</h3>
+            <p>Search, sync, and manage playlists, cues, and crates.</p>
           </div>
         </div>
 
-        <!-- Library sidebar + tracks -->
-        <div class="mock-library">
-          <div style="display:grid;grid-template-columns:140px 1fr;gap:0.75rem;">
-            <!-- Sidebar -->
-            <div>
-              <div class="mock-tree">
-                <div class="item active" style="padding-left:0;">
-                  <span class="folder-icon">&#9654;</span> Library
+        <div class="command-bar">
+          <span class="prompt">$</span>
+          <span class="cmd">bangersss-mcp</span>
+          <span class="args">ingest ~/Downloads/Music</span>
+          <span class="arrow">&rarr;</span>
+          <span class="args">~/Music/DJ Library</span>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="mock-ui">
+          <div class="mock-window">
+            <!-- Title bar -->
+            <div class="mock-titlebar">
+              <div class="mock-dot red"></div>
+              <div class="mock-dot yellow"></div>
+              <div class="mock-dot green"></div>
+            </div>
+
+            <!-- Waveform -->
+            <div class="mock-waveform" id="waveform"></div>
+
+            <!-- Pending changes -->
+            <div class="mock-section">
+              <div class="mock-section-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem">
+                  <h4>Plan: Organize Summer Set</h4>
+                  <span class="mock-badge">Dry Mode</span>
                 </div>
-                <div class="nested">
-                  <div class="item active">All Tracks <span class="count">12,543</span></div>
-                  <div class="item" style="padding-left:0;margin-top:0.3rem;">
-                    <span class="folder-icon">&#9654;</span> Playlists
-                  </div>
-                  <div class="nested">
-                    <div class="item">Sets</div>
-                    <div class="item">Warmup</div>
-                    <div class="item">Peak Time</div>
-                  </div>
-                  <div class="item" style="padding-left:0;margin-top:0.3rem;">
-                    <span class="folder-icon">&#9654;</span> Crates
-                  </div>
-                  <div class="nested">
-                    <div class="item">House</div>
-                    <div class="item">Techno</div>
-                    <div class="item">Acid Jazz</div>
-                  </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  margin-bottom: 0.5rem;
+                "
+              >
+                <span style="font-size: 0.78rem; font-weight: 600"
+                  >Pending Changes</span
+                >
+                <span class="mock-count">(47)</span>
+              </div>
+              <div class="change-row">
+                <div class="check"></div>
+                <span class="op">move</span>
+                <span class="from">track01.mp3</span>
+                <span class="arrow-sm">&rarr;</span>
+                <span class="to">House/DJ Snake/Turn Down for What.mp3</span>
+              </div>
+              <div class="change-row">
+                <div class="check"></div>
+                <span class="op">move</span>
+                <span class="from">track02.flac</span>
+                <span class="arrow-sm">&rarr;</span>
+                <span class="to">Techno/Charlotte de Witte/Overdrive.flac</span>
+              </div>
+              <div class="change-row">
+                <div class="check"></div>
+                <span class="op">rename</span>
+                <span class="from">AUDIO_003.wav</span>
+                <span class="arrow-sm">&rarr;</span>
+                <span class="to">Acid Jazz/Artist - Track 03.wav</span>
+              </div>
+              <div class="change-row">
+                <div class="check"></div>
+                <span class="op">tags</span>
+                <span class="from">song.mp3</span>
+                <span class="arrow-sm">&rarr;</span>
+                <span class="to">Add BPM: 128, Key: 8B, Genre: House</span>
+              </div>
+              <div class="mock-buttons">
+                <div class="mock-btn mock-btn-green">Commit Changes</div>
+                <div class="mock-btn mock-btn-ghost">Discard All</div>
+              </div>
+            </div>
+
+            <!-- BPM & Key -->
+            <div class="mock-bpm-key">
+              <div class="bpm-display">
+                <div class="label">BPM</div>
+                <div class="value">128<span class="decimal">.4</span></div>
+              </div>
+              <div class="key-display">
+                <div class="label">Key</div>
+                <div class="camelot-wheel">
+                  <svg viewBox="0 0 100 100">
+                    <!-- Outer ring segments -->
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="#232328"
+                      stroke-width="14"
+                    />
+                    <!-- Highlight segment -->
+                    <path
+                      d="M50 8 A42 42 0 0 1 86.3 29"
+                      fill="none"
+                      stroke="#e5a800"
+                      stroke-width="14"
+                      stroke-linecap="round"
+                      opacity="0.8"
+                    />
+                    <!-- Inner ring -->
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="28"
+                      fill="none"
+                      stroke="#1a1a1e"
+                      stroke-width="10"
+                    />
+                    <path
+                      d="M50 22 A28 28 0 0 1 74.2 36"
+                      fill="none"
+                      stroke="#a07500"
+                      stroke-width="10"
+                      stroke-linecap="round"
+                      opacity="0.6"
+                    />
+                    <!-- Labels -->
+                    <text
+                      x="73"
+                      y="18"
+                      fill="#e5a800"
+                      font-size="8"
+                      font-weight="700"
+                      font-family="Inter, sans-serif"
+                    >
+                      8B
+                    </text>
+                    <text
+                      x="88"
+                      y="42"
+                      fill="#7a7a88"
+                      font-size="6"
+                      font-weight="600"
+                      font-family="Inter, sans-serif"
+                    >
+                      9B
+                    </text>
+                    <text
+                      x="85"
+                      y="68"
+                      fill="#7a7a88"
+                      font-size="6"
+                      font-weight="600"
+                      font-family="Inter, sans-serif"
+                    >
+                      10B
+                    </text>
+                    <text
+                      x="58"
+                      y="14"
+                      fill="#7a7a88"
+                      font-size="6"
+                      font-weight="600"
+                      font-family="Inter, sans-serif"
+                    >
+                      7A
+                    </text>
+                    <text
+                      x="10"
+                      y="42"
+                      fill="#7a7a88"
+                      font-size="6"
+                      font-weight="600"
+                      font-family="Inter, sans-serif"
+                    >
+                      3A
+                    </text>
+                    <text
+                      x="35"
+                      y="14"
+                      fill="#7a7a88"
+                      font-size="6"
+                      font-weight="600"
+                      font-family="Inter, sans-serif"
+                    >
+                      6B
+                    </text>
+                    <!-- Center -->
+                    <text
+                      x="50"
+                      y="53"
+                      fill="#e5a800"
+                      font-size="11"
+                      font-weight="800"
+                      text-anchor="middle"
+                      font-family="Inter, sans-serif"
+                    >
+                      8B
+                    </text>
+                    <text
+                      x="50"
+                      y="62"
+                      fill="#7a7a88"
+                      font-size="5"
+                      text-anchor="middle"
+                      font-family="Inter, sans-serif"
+                    >
+                      Camelot
+                    </text>
+                  </svg>
                 </div>
               </div>
             </div>
-            <!-- Track table -->
-            <div class="mock-tracks">
-              <div class="mock-track-header">
-                <span>Track Title</span>
-                <span>Artist</span>
-                <span>BPM</span>
-                <span>Key</span>
-                <span>Genre</span>
-              </div>
-              <div class="mock-track-row">
-                <span class="title">Turn Down for What</span>
-                <span>DJ Snake</span>
-                <span>128</span>
-                <span><span class="key-badge key-8b">8B</span></span>
-                <span>House</span>
-              </div>
-              <div class="mock-track-row">
-                <span class="title">Overdrive</span>
-                <span>Charlotte de Witte</span>
-                <span>140</span>
-                <span><span class="key-badge key-3a">3A</span></span>
-                <span>Techno</span>
-              </div>
-              <div class="mock-track-row">
-                <span class="title">Track 03</span>
-                <span>Unknown Artist</span>
-                <span>126</span>
-                <span><span class="key-badge key-10a">10A</span></span>
-                <span>Acid Jazz</span>
-              </div>
-              <div class="mock-track-row">
-                <span class="title">Midnight Groove</span>
-                <span>Disclosure</span>
-                <span>124</span>
-                <span><span class="key-badge key-5b">5B</span></span>
-                <span>House</span>
-              </div>
-              <div class="mock-track-row">
-                <span class="title">Warehouse</span>
-                <span>Green Velvet</span>
-                <span>132</span>
-                <span><span class="key-badge key-7a">7A</span></span>
-                <span>Techno</span>
+
+            <!-- Library sidebar + tracks -->
+            <div class="mock-library">
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 140px 1fr;
+                  gap: 0.75rem;
+                "
+              >
+                <!-- Sidebar -->
+                <div>
+                  <div class="mock-tree">
+                    <div class="item active" style="padding-left: 0">
+                      <span class="folder-icon">&#9654;</span> Library
+                    </div>
+                    <div class="nested">
+                      <div class="item active">
+                        All Tracks <span class="count">12,543</span>
+                      </div>
+                      <div
+                        class="item"
+                        style="padding-left: 0; margin-top: 0.3rem"
+                      >
+                        <span class="folder-icon">&#9654;</span> Playlists
+                      </div>
+                      <div class="nested">
+                        <div class="item">Sets</div>
+                        <div class="item">Warmup</div>
+                        <div class="item">Peak Time</div>
+                      </div>
+                      <div
+                        class="item"
+                        style="padding-left: 0; margin-top: 0.3rem"
+                      >
+                        <span class="folder-icon">&#9654;</span> Crates
+                      </div>
+                      <div class="nested">
+                        <div class="item">House</div>
+                        <div class="item">Techno</div>
+                        <div class="item">Acid Jazz</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Track table -->
+                <div class="mock-tracks">
+                  <div class="mock-track-header">
+                    <span>Track Title</span>
+                    <span>Artist</span>
+                    <span>BPM</span>
+                    <span>Key</span>
+                    <span>Genre</span>
+                  </div>
+                  <div class="mock-track-row">
+                    <span class="title">Turn Down for What</span>
+                    <span>DJ Snake</span>
+                    <span>128</span>
+                    <span><span class="key-badge key-8b">8B</span></span>
+                    <span>House</span>
+                  </div>
+                  <div class="mock-track-row">
+                    <span class="title">Overdrive</span>
+                    <span>Charlotte de Witte</span>
+                    <span>140</span>
+                    <span><span class="key-badge key-3a">3A</span></span>
+                    <span>Techno</span>
+                  </div>
+                  <div class="mock-track-row">
+                    <span class="title">Track 03</span>
+                    <span>Unknown Artist</span>
+                    <span>126</span>
+                    <span><span class="key-badge key-10a">10A</span></span>
+                    <span>Acid Jazz</span>
+                  </div>
+                  <div class="mock-track-row">
+                    <span class="title">Midnight Groove</span>
+                    <span>Disclosure</span>
+                    <span>124</span>
+                    <span><span class="key-badge key-5b">5B</span></span>
+                    <span>House</span>
+                  </div>
+                  <div class="mock-track-row">
+                    <span class="title">Warehouse</span>
+                    <span>Green Velvet</span>
+                    <span>132</span>
+                    <span><span class="key-badge key-7a">7A</span></span>
+                    <span>Techno</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- How it works -->
-<section class="content" id="how-it-works">
-  <div class="section-label">How it works</div>
-  <h2>Natural language, real results</h2>
-  <p class="subtitle">Bangersss is an MCP server &mdash; it connects to AI assistants like Claude, giving them 60+ tools to manage your music library.</p>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <h3>Connect</h3>
-      <p>Add Bangersss to your Claude Code or Claude Desktop MCP config. One line of JSON.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <h3>Describe</h3>
-      <p>Tell Claude what you want in plain English. "Organize my downloads by genre" or "Find all 128 BPM house tracks."</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <h3>Preview</h3>
-      <p>Every change goes to dry mode first. Review proposed moves, renames, and tag edits before anything happens.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <h3>Commit</h3>
-      <p>Approve the changes. Files get moved, tags written, playlists updated &mdash; all at once, or selectively.</p>
-    </div>
-  </div>
-</section>
+    <!-- How it works -->
+    <section class="content" id="how-it-works">
+      <div class="section-label">How it works</div>
+      <h2>Natural language, real results</h2>
+      <p class="subtitle">
+        Bangersss is an MCP server &mdash; it connects to AI assistants like
+        Claude, giving them 60+ tools to manage your music library.
+      </p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Connect</h3>
+          <p>
+            Add Bangersss to your Claude Code or Claude Desktop MCP config. One
+            line of JSON.
+          </p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Describe</h3>
+          <p>
+            Tell Claude what you want in plain English. "Organize my downloads
+            by genre" or "Find all 128 BPM house tracks."
+          </p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Preview</h3>
+          <p>
+            Every change goes to dry mode first. Review proposed moves, renames,
+            and tag edits before anything happens.
+          </p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h3>Commit</h3>
+          <p>
+            Approve the changes. Files get moved, tags written, playlists
+            updated &mdash; all at once, or selectively.
+          </p>
+        </div>
+      </div>
+    </section>
 
-<!-- Tools -->
-<section class="content" id="tools">
-  <div class="section-label">60+ tools</div>
-  <h2>Batteries included</h2>
-  <p class="subtitle">Comprehensive tooling for every part of the DJ library workflow.</p>
-  <div class="tools-grid">
-    <div class="tool-cat">
-      <h3>Ingest & Scanning <span class="count">7</span></h3>
-      <ul>
-        <li>quick_ingest</li>
-        <li>scan_incoming</li>
-        <li>analyze_incoming</li>
-        <li>check_duplicates</li>
-        <li>stage_ingest</li>
-        <li>scan_directory</li>
-        <li>list_audio_files</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Tags & Analysis <span class="count">8</span></h3>
-      <ul>
-        <li>read_tags</li>
-        <li>batch_read_tags</li>
-        <li>write_tags</li>
-        <li>suggest_tags</li>
-        <li>analyze_bpm</li>
-        <li>batch_analyze_bpm</li>
-        <li>analyze_key</li>
-        <li>batch_analyze_key</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Key & Harmony <span class="count">5</span></h3>
-      <ul>
-        <li>get_key_info</li>
-        <li>convert_key</li>
-        <li>get_compatible_keys</li>
-        <li>check_key_compatibility</li>
-        <li>list_all_keys</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>File Operations <span class="count">4</span></h3>
-      <ul>
-        <li>rename_file</li>
-        <li>move_file</li>
-        <li>batch_rename</li>
-        <li>organize_files</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Playlists <span class="count">6</span></h3>
-      <ul>
-        <li>create_playlist</li>
-        <li>add_to_playlist</li>
-        <li>remove_from_playlist</li>
-        <li>read_playlist</li>
-        <li>list_playlists</li>
-        <li>export_playlist</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Plans <span class="count">8</span></h3>
-      <ul>
-        <li>create_plan</li>
-        <li>add_to_plan</li>
-        <li>view_plan</li>
-        <li>execute_plan</li>
-        <li>export_plan</li>
-        <li>import_plan</li>
-        <li>resume_plan</li>
-        <li>list_plans</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Dry Mode <span class="count">5</span></h3>
-      <ul>
-        <li>get_pending_changes</li>
-        <li>preview_change</li>
-        <li>commit_changes</li>
-        <li>discard_changes</li>
-        <li>commit_selective</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Rekordbox <span class="count">8</span></h3>
-      <ul>
-        <li>rb_connect</li>
-        <li>rb_search_tracks</li>
-        <li>rb_list_playlists</li>
-        <li>rb_get_playlist_tracks</li>
-        <li>rb_add_to_playlist</li>
-        <li>rb_create_playlist</li>
-        <li>rb_get_cue_points</li>
-        <li>rb_library_stats</li>
-      </ul>
-    </div>
-    <div class="tool-cat">
-      <h3>Engine DJ <span class="count">7</span></h3>
-      <ul>
-        <li>edj_connect</li>
-        <li>edj_search_tracks</li>
-        <li>edj_list_crates</li>
-        <li>edj_get_crate_tracks</li>
-        <li>edj_add_to_crate</li>
-        <li>edj_create_crate</li>
-        <li>edj_library_stats</li>
-      </ul>
-    </div>
-  </div>
-</section>
+    <!-- Tools -->
+    <section class="content" id="tools">
+      <div class="section-label">60+ tools</div>
+      <h2>Batteries included</h2>
+      <p class="subtitle">
+        Comprehensive tooling for every part of the DJ library workflow.
+      </p>
+      <div class="tools-grid">
+        <div class="tool-cat">
+          <h3>Ingest & Scanning <span class="count">7</span></h3>
+          <ul>
+            <li>quick_ingest</li>
+            <li>scan_incoming</li>
+            <li>analyze_incoming</li>
+            <li>check_duplicates</li>
+            <li>stage_ingest</li>
+            <li>scan_directory</li>
+            <li>list_audio_files</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Tags & Analysis <span class="count">8</span></h3>
+          <ul>
+            <li>read_tags</li>
+            <li>batch_read_tags</li>
+            <li>write_tags</li>
+            <li>suggest_tags</li>
+            <li>analyze_bpm</li>
+            <li>batch_analyze_bpm</li>
+            <li>analyze_key</li>
+            <li>batch_analyze_key</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Key & Harmony <span class="count">5</span></h3>
+          <ul>
+            <li>get_key_info</li>
+            <li>convert_key</li>
+            <li>get_compatible_keys</li>
+            <li>check_key_compatibility</li>
+            <li>list_all_keys</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>File Operations <span class="count">4</span></h3>
+          <ul>
+            <li>rename_file</li>
+            <li>move_file</li>
+            <li>batch_rename</li>
+            <li>organize_files</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Playlists <span class="count">6</span></h3>
+          <ul>
+            <li>create_playlist</li>
+            <li>add_to_playlist</li>
+            <li>remove_from_playlist</li>
+            <li>read_playlist</li>
+            <li>list_playlists</li>
+            <li>export_playlist</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Plans <span class="count">8</span></h3>
+          <ul>
+            <li>create_plan</li>
+            <li>add_to_plan</li>
+            <li>view_plan</li>
+            <li>execute_plan</li>
+            <li>export_plan</li>
+            <li>import_plan</li>
+            <li>resume_plan</li>
+            <li>list_plans</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Dry Mode <span class="count">5</span></h3>
+          <ul>
+            <li>get_pending_changes</li>
+            <li>preview_change</li>
+            <li>commit_changes</li>
+            <li>discard_changes</li>
+            <li>commit_selective</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Rekordbox <span class="count">8</span></h3>
+          <ul>
+            <li>rb_connect</li>
+            <li>rb_search_tracks</li>
+            <li>rb_list_playlists</li>
+            <li>rb_get_playlist_tracks</li>
+            <li>rb_add_to_playlist</li>
+            <li>rb_create_playlist</li>
+            <li>rb_get_cue_points</li>
+            <li>rb_library_stats</li>
+          </ul>
+        </div>
+        <div class="tool-cat">
+          <h3>Engine DJ <span class="count">7</span></h3>
+          <ul>
+            <li>edj_connect</li>
+            <li>edj_search_tracks</li>
+            <li>edj_list_crates</li>
+            <li>edj_get_crate_tracks</li>
+            <li>edj_add_to_crate</li>
+            <li>edj_create_crate</li>
+            <li>edj_library_stats</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-<!-- Install -->
-<section class="content" id="install">
-  <div class="section-label">Get started</div>
-  <h2>Up and running in minutes</h2>
-  <p class="subtitle">One command to install. One line of JSON to connect.</p>
+    <!-- Install -->
+    <section class="content" id="install">
+      <div class="section-label">Get started</div>
+      <h2>Up and running in minutes</h2>
+      <p class="subtitle">
+        One command to install. One line of JSON to connect.
+      </p>
 
-  <div class="install-block">
-    <div class="tab-bar">
-      <button class="tab active" data-tab="claude-code">Claude Code</button>
-      <button class="tab" data-tab="claude-desktop">Claude Desktop</button>
-    </div>
-    <div class="install-panel active" id="claude-code">
-      <pre><span class="comment"># Add to Claude Code MCP settings</span>
+      <div class="install-block">
+        <div class="tab-bar">
+          <button class="tab active" data-tab="claude-code">Claude Code</button>
+          <button class="tab" data-tab="claude-desktop">Claude Desktop</button>
+        </div>
+        <div class="install-panel active" id="claude-code">
+          <pre><span class="comment"># Add to Claude Code MCP settings</span>
 <span class="comment"># ~/.claude/settings.json</span>
 {
   <span class="string">"mcpServers"</span>: {
@@ -428,9 +699,9 @@
     }
   }
 }</pre>
-    </div>
-    <div class="install-panel" id="claude-desktop">
-      <pre><span class="comment"># Add to Claude Desktop config</span>
+        </div>
+        <div class="install-panel" id="claude-desktop">
+          <pre><span class="comment"># Add to Claude Desktop config</span>
 <span class="comment"># ~/Library/Application Support/Claude/claude_desktop_config.json</span>
 {
   <span class="string">"mcpServers"</span>: {
@@ -440,69 +711,82 @@
     }
   }
 }</pre>
-    </div>
-  </div>
+        </div>
+      </div>
 
-  <div style="margin-top: 2.5rem;">
-    <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">Supported formats</h3>
-    <div class="formats">
-      <span class="format-tag">MP3</span>
-      <span class="format-tag">FLAC</span>
-      <span class="format-tag">WAV</span>
-      <span class="format-tag">AIFF</span>
-      <span class="format-tag">M4A</span>
-      <span class="format-tag">OGG</span>
-      <span class="format-tag">WMA</span>
-      <span class="format-tag">AAC</span>
-      <span class="format-tag">ALAC</span>
-    </div>
-  </div>
+      <div style="margin-top: 2.5rem">
+        <h3 style="font-size: 1rem; margin-bottom: 0.75rem">
+          Supported formats
+        </h3>
+        <div class="formats">
+          <span class="format-tag">MP3</span>
+          <span class="format-tag">FLAC</span>
+          <span class="format-tag">WAV</span>
+          <span class="format-tag">AIFF</span>
+          <span class="format-tag">M4A</span>
+          <span class="format-tag">OGG</span>
+          <span class="format-tag">WMA</span>
+          <span class="format-tag">AAC</span>
+          <span class="format-tag">ALAC</span>
+        </div>
+      </div>
 
-  <div style="margin-top: 2rem;">
-    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Prerequisites</h3>
-    <p style="font-size: 0.875rem; color: var(--text-muted);">Node.js &ge; 20 &middot; ffmpeg (for BPM analysis) &middot; <a href="https://github.com/evanpurkhiser/keyfinder-cli" style="color: var(--text-muted);">keyfinder-cli</a> (for key detection) &middot; Rekordbox or Engine DJ (optional)</p>
-  </div>
-</section>
+      <div style="margin-top: 2rem">
+        <h3 style="font-size: 1rem; margin-bottom: 0.5rem">Prerequisites</h3>
+        <p style="font-size: 0.875rem; color: var(--text-muted)">
+          Node.js &ge; 20 &middot; ffmpeg (for BPM analysis) &middot;
+          <a
+            href="https://github.com/evanpurkhiser/keyfinder-cli"
+            style="color: var(--text-muted)"
+            >keyfinder-cli</a
+          >
+          (for key detection) &middot; Rekordbox or Engine DJ (optional)
+        </p>
+      </div>
+    </section>
 
-<!-- Footer -->
-<footer>
-  <p>Bangersss is open source under the MIT license.</p>
-  <p style="margin-top: 0.5rem;">
-    <a href="https://github.com/albinekb/bangersss-mcp">GitHub</a>
-    &middot;
-    <a href="https://github.com/albinekb/bangersss-mcp/issues">Issues</a>
-    &middot;
-    <a href="https://modelcontextprotocol.io">Model Context Protocol</a>
-  </p>
-</footer>
+    <!-- Footer -->
+    <footer>
+      <p>Bangersss is open source under the MIT license.</p>
+      <p style="margin-top: 0.5rem">
+        <a href="https://github.com/albinekb/bangersss-mcp">GitHub</a>
+        &middot;
+        <a href="https://github.com/albinekb/bangersss-mcp/issues">Issues</a>
+        &middot;
+        <a href="https://modelcontextprotocol.io">Model Context Protocol</a>
+      </p>
+    </footer>
 
-<script>
-  // Generate waveform bars
-  const wf = document.getElementById('waveform');
-  for (let i = 0; i < 120; i++) {
-    const bar = document.createElement('div');
-    bar.className = 'wave-bar';
-    // Create a somewhat realistic waveform shape
-    const pos = i / 120;
-    const base = Math.sin(pos * Math.PI) * 0.6 + 0.2;
-    const noise = Math.random() * 0.3;
-    const beat = (i % 8 < 2) ? 0.15 : 0;
-    const h = Math.min(1, base + noise + beat);
-    bar.style.height = (h * 100) + '%';
-    if (i > 80) bar.style.opacity = '0.3';
-    wf.appendChild(bar);
-  }
+    <script>
+      // Generate waveform bars
+      const wf = document.getElementById('waveform')
+      for (let i = 0; i < 120; i++) {
+        const bar = document.createElement('div')
+        bar.className = 'wave-bar'
+        // Create a somewhat realistic waveform shape
+        const pos = i / 120
+        const base = Math.sin(pos * Math.PI) * 0.6 + 0.2
+        const noise = Math.random() * 0.3
+        const beat = i % 8 < 2 ? 0.15 : 0
+        const h = Math.min(1, base + noise + beat)
+        bar.style.height = h * 100 + '%'
+        if (i > 80) bar.style.opacity = '0.3'
+        wf.appendChild(bar)
+      }
 
-  // Tab switching
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.install-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.tab).classList.add('active');
-    });
-  });
-</script>
-
-</body>
+      // Tab switching
+      document.querySelectorAll('.tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          document
+            .querySelectorAll('.tab')
+            .forEach((t) => t.classList.remove('active'))
+          document
+            .querySelectorAll('.install-panel')
+            .forEach((p) => p.classList.remove('active'))
+          tab.classList.add('active')
+          document.getElementById(tab.dataset.tab).classList.add('active')
+        })
+      })
+    </script>
+  </body>
 </html>

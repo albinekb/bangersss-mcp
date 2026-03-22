@@ -1,9 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import fg from 'fast-glob';
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
-import { SUPPORTED_FORMATS, isAudioFile } from '../util/audio-formats.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import fg from 'fast-glob'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
+import { SUPPORTED_FORMATS, isAudioFile } from '../util/audio-formats.js'
 import {
   buildExtensionGlob,
   normalizeGlobPattern,

@@ -1,5 +1,5 @@
-import path from "node:path";
-import type { PlaylistTrack } from "./types.js";
+import path from 'node:path'
+import type { PlaylistTrack } from './types.js'
 
 const WINDOWS_DRIVE_PATH = /^[A-Za-z]:[\\/]/
 

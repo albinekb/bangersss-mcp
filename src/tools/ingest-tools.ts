@@ -11,15 +11,15 @@
  * All mutations go through overlay (dry mode) until committed.
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
-import fg from 'fast-glob';
-import { readTags, type TrackMetadata } from '../tags/tag-reader.js';
-import { analyzeBpm } from '../audio/bpm-analyzer.js';
-import { getKeyInfo } from '../audio/keys.js';
-import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
+import fg from 'fast-glob'
+import { readTags, type TrackMetadata } from '../tags/tag-reader.js'
+import { analyzeBpm } from '../audio/bpm-analyzer.js'
+import { getKeyInfo } from '../audio/keys.js'
+import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
 import { buildExtensionGlob } from '../util/glob-patterns.js'
 import {
   createRenameOp,

@@ -2,12 +2,12 @@
  * Integration tests for ingest tools.
  * Creates a temp directory with fake audio files and tests the scan/ingest workflow.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-import { tmpdir } from 'node:os';
-import NodeID3 from 'node-id3';
-import { createServer } from '../../src/server.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import { tmpdir } from 'node:os'
+import NodeID3 from 'node-id3'
+import { createServer } from '../../src/server.js'
 
 async function findMp3Files(directory: string): Promise<string[]> {
   const fg = (await import('fast-glob')).default

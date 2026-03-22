@@ -2,8 +2,8 @@
  * Rekordbox cue point queries.
  */
 
-import type { Database } from 'better-sqlite3-multiple-ciphers';
-import type { RbCue } from './schema.js';
+import type { Database } from 'better-sqlite3-multiple-ciphers'
+import type { RbCue } from './schema.js'
 
 /**
  * Return all cue points for a given track (content ID).
@@ -18,7 +18,7 @@ export function getCuePoints(db: Database, contentId: string): RbCue[] {
        WHERE ContentID = ?
        ORDER BY InMsec`,
     )
-    .all(contentId) as RbCue[];
+    .all(contentId) as RbCue[]
 }
 
 /**
@@ -34,5 +34,5 @@ export function getHotCues(db: Database, contentId: string): RbCue[] {
        WHERE ContentID = ? AND Hotcue IS NOT NULL AND Hotcue > 0
        ORDER BY Hotcue`,
     )
-    .all(contentId) as RbCue[];
+    .all(contentId) as RbCue[]
 }
