@@ -2,7 +2,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createServer } from './server.js'
-import { createLogger } from './util/logger.js'
+import { createLogger } from '@bangersss/core'
 
 const log = createLogger('main')
 

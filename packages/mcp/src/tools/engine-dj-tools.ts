@@ -1,12 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { Database } from 'better-sqlite3-multiple-ciphers'
-import { openEngineDjDb, closeEngineDjDb } from '../engine-dj/db.js'
-import type {
-  EdjTrack,
-  EdjCrate,
-  EdjCrateTrackList,
-} from '../engine-dj/schema.js'
+import {
+  engineDj,
+  type EdjTrack,
+  type EdjCrate,
+  type EdjCrateTrackList,
+} from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 /** Module-level state for the Engine DJ database connection. */
@@ -35,11 +35,11 @@ export function registerEngineDjTools(
       try {
         // Close any existing connection
         if (edjDb) {
-          closeEngineDjDb(edjDb)
+          engineDj.closeEngineDjDb(edjDb)
           edjDb = null
         }
 
-        edjDb = openEngineDjDb(dbPath)
+        edjDb = engineDj.openEngineDjDb(dbPath)
 
         return {
           content: [

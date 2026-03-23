@@ -10,10 +10,7 @@ import { registerRekordboxTools } from './tools/rekordbox-tools.js'
 import { registerEngineDjTools } from './tools/engine-dj-tools.js'
 import { registerFileTools } from './tools/file-tools.js'
 import { registerIngestTools } from './tools/ingest-tools.js'
-import { OverlayFS } from './overlay/overlay-fs.js'
-import { PlanManager } from './plans/plan-manager.js'
-import { PlaylistManager } from './playlists/playlist-manager.js'
-import { createLogger } from './util/logger.js'
+import { OverlayFS, PlanManager, PlaylistManager, CacheStore, createLogger } from '@bangersss/core'
 
 const log = createLogger('server')
 
@@ -21,6 +18,7 @@ export interface ServerContext {
   overlay: OverlayFS
   planManager: PlanManager
   playlistManager: PlaylistManager
+  cache: CacheStore
 }
 
 export function createServer(): { server: McpServer; context: ServerContext } {
@@ -32,8 +30,9 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   const overlay = new OverlayFS()
   const planManager = new PlanManager()
   const playlistManager = new PlaylistManager()
+  const cache = new CacheStore()
 
-  const context: ServerContext = { overlay, planManager, playlistManager }
+  const context: ServerContext = { overlay, planManager, playlistManager, cache }
 
   // Register all tool groups
   registerScanTools(server, context)

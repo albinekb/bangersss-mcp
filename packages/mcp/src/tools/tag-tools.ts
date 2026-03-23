@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { readTags, batchReadTags } from '../tags/tag-reader.js'
-import { writeTags } from '../tags/tag-writer.js'
+import { readTags, batchReadTags, writeTags } from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 export function registerTagTools(

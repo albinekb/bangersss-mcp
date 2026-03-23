@@ -1,0 +1,30 @@
+{
+  "name": "@bangersss/core",
+  "version": "0.3.4",
+  "description": "Core library for bangersss music organization",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3-multiple-ciphers": "^12.8.0",
+    "bytes": "^3.1.2",
+    "fast-glob": "^3.3.3",
+    "fs-iterator": "^7.1.1",
+    "memfs": "^4.57.1",
+    "music-metadata": "^11.12.3",
+    "nanoid": "^5.1.7",
+    "node-id3": "^0.2.6",
+    "rekordbox-connect": "^1.2.3",
+    "unionfs": "^4.5.4",
+    "zod": "^4.3.6"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

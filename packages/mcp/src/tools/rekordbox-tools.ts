@@ -1,13 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import {
-  openRekordboxDb,
-  closeRekordboxDb,
-  findRekordboxDb,
-  type IRekordboxDb,
-  type Playlist,
-  type PlaylistTrack,
-} from '../rekordbox/db.js'
+import { rekordbox } from '@bangersss/core'
+
+type IRekordboxDb = rekordbox.IRekordboxDb
+type Playlist = rekordbox.Playlist
+type PlaylistTrack = rekordbox.PlaylistTrack
 import type { ServerContext } from '../server.js'
 
 type Row = Record<string, unknown>
@@ -44,11 +41,11 @@ export function registerRekordboxTools(
     async ({ dbPath, dbPassword }) => {
       try {
         if (rbDb) {
-          closeRekordboxDb(rbDb)
+          rekordbox.closeRekordboxDb(rbDb)
           rbDb = null
         }
 
-        rbDb = await openRekordboxDb(dbPath, dbPassword)
+        rbDb = await rekordbox.openRekordboxDb(dbPath, dbPassword)
 
         // Quick test — load track count
         const tracks = rbDb.loadTracks(1)
@@ -60,7 +57,7 @@ export function registerRekordboxTools(
               text: JSON.stringify(
                 {
                   connected: true,
-                  dbPath: dbPath ?? findRekordboxDb() ?? '(auto-detected)',
+                  dbPath: dbPath ?? rekordbox.findRekordboxDb() ?? '(auto-detected)',
                   trackCount: tracks?.count ?? 0,
                 },
                 null,
