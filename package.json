@@ -31,7 +31,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:mcp": "pnpm --filter @bangersss/mcp run dev",
-    "dev:cli": "pnpm --filter @bangersss/cli run dev"
+    "dev:cli": "pnpm --filter @bangersss/cli run dev",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/bytes": "^3.1.5",

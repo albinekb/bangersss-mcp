@@ -10,7 +10,21 @@ import { registerRekordboxTools } from './tools/rekordbox-tools.js'
 import { registerEngineDjTools } from './tools/engine-dj-tools.js'
 import { registerFileTools } from './tools/file-tools.js'
 import { registerIngestTools } from './tools/ingest-tools.js'
-import { OverlayFS, PlanManager, PlaylistManager, CacheStore, createLogger } from '@bangersss/core'
+import { registerInventoryTools } from './tools/inventory-tools.js'
+import { registerInventoryResources } from './tools/inventory-resources.js'
+import {
+  OverlayFS,
+  PlanManager,
+  PlaylistManager,
+  CacheStore,
+  createLogger,
+  SQLiteService,
+  HashService,
+  AudioMetadataService,
+  ArchiveIndexService,
+  InventoryService,
+  MovePlanService,
+} from '@bangersss/core'
 
 const log = createLogger('server')
 
@@ -19,6 +33,8 @@ export interface ServerContext {
   planManager: PlanManager
   playlistManager: PlaylistManager
   cache: CacheStore
+  inventory: InventoryService
+  movePlans: MovePlanService
 }
 
 export function createServer(): { server: McpServer; context: ServerContext } {
@@ -31,8 +47,26 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   const planManager = new PlanManager()
   const playlistManager = new PlaylistManager()
   const cache = new CacheStore()
+  const sqlite = new SQLiteService()
+  const hashService = new HashService()
+  const audioMetadata = new AudioMetadataService()
+  const archiveIndex = new ArchiveIndexService(audioMetadata)
+  const inventory = new InventoryService(
+    sqlite,
+    hashService,
+    audioMetadata,
+    archiveIndex,
+  )
+  const movePlans = new MovePlanService(inventory, overlay, hashService)
 
-  const context: ServerContext = { overlay, planManager, playlistManager, cache }
+  const context: ServerContext = {
+    overlay,
+    planManager,
+    playlistManager,
+    cache,
+    inventory,
+    movePlans,
+  }
 
   // Register all tool groups
   registerScanTools(server, context)
@@ -45,6 +79,8 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   registerEngineDjTools(server, context)
   registerFileTools(server, context)
   registerIngestTools(server, context)
+  registerInventoryTools(server, context)
+  registerInventoryResources(server, context)
 
   log.info('bangersss-mcp server initialized')
 

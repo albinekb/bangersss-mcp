@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/yauzl": "^2.10.3",
     "better-sqlite3-multiple-ciphers": "^12.8.0",
     "bytes": "^3.1.2",
     "fast-glob": "^3.3.3",
@@ -22,6 +23,7 @@
     "node-id3": "^0.2.6",
     "rekordbox-connect": "^1.2.3",
     "unionfs": "^4.5.4",
+    "yauzl": "^3.3.0",
     "zod": "^4.3.6"
   },
   "engines": {

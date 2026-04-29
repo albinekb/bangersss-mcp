@@ -183,3 +183,13 @@ export {
   type SamplePackFilterOptions,
   PRODUCTION_EXTENSIONS,
 } from './util/walker/sample-pack-detector.js'
+
+// Inventory
+export { getDefaultInventoryDbPath, SUPPORTED_AUDIO_EXTENSIONS, SUPPORTED_ARCHIVE_EXTENSIONS } from './config/defaults.js'
+export * from './types/index.js'
+export { ArchiveIndexService } from './inventory/archive-index-service.js'
+export { AudioMetadataService } from './inventory/audio-metadata-service.js'
+export { HashService } from './inventory/hash-service.js'
+export { InventoryService } from './inventory/inventory-service.js'
+export { MovePlanService } from './inventory/move-plan-service.js'
+export { SQLiteService } from './inventory/sqlite-service.js'

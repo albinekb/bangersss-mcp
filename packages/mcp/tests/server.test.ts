@@ -8,6 +8,8 @@ describe('Server', () => {
     expect(context.overlay).toBeDefined()
     expect(context.planManager).toBeDefined()
     expect(context.playlistManager).toBeDefined()
+    expect(context.inventory).toBeDefined()
+    expect(context.movePlans).toBeDefined()
   })
 
   it('overlay starts clean', () => {
