@@ -1,16 +1,10 @@
 {
-  "name": "bangersss-mcp",
+  "name": "bangersss",
   "version": "0.3.4",
-  "description": "MCP server for organizing music with LLM assistance - built for DJs",
+  "private": true,
+  "description": "Music organization tools for DJs - MCP server, CLI, and core library",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "bangersss-mcp": "dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/albinekb/bangersss-mcp.git"
@@ -31,30 +25,14 @@
     "model-context-protocol"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "dev:mcp": "pnpm --filter @bangersss/mcp run dev",
+    "dev:cli": "pnpm --filter @bangersss/cli run dev",
     "prepublishOnly": "npm run build"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "@types/yauzl": "^2.10.3",
-    "better-sqlite3-multiple-ciphers": "^12.8.0",
-    "bytes": "^3.1.2",
-    "fast-glob": "^3.3.3",
-    "fs-iterator": "^7.1.1",
-    "memfs": "^4.57.1",
-    "music-metadata": "^11.12.3",
-    "nanoid": "^5.1.7",
-    "node-id3": "^0.2.6",
-    "rekordbox-connect": "^1.2.3",
-    "unionfs": "^4.5.4",
-    "yauzl": "^3.3.0",
-    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bytes": "^3.1.5",
@@ -66,5 +44,11 @@
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3-multiple-ciphers",
+      "esbuild"
+    ]
   }
 }

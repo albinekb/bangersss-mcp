@@ -2,8 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import { parseM3U } from '../playlists/m3u.js'
-import type { PlaylistTrack } from '../playlists/types.js'
+import { parseM3U, type PlaylistTrack } from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 function formatPlaylist(playlist: {

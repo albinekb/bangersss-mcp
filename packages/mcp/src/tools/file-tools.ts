@@ -2,9 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import * as path from 'node:path'
 import fg from 'fast-glob'
-import { readTags } from '../tags/tag-reader.js'
-import { isAudioFile } from '../util/audio-formats.js'
-import { normalizeGlobPattern } from '../util/glob-patterns.js'
+import { readTags, isAudioFile, normalizeGlobPattern, expandTemplate, sanitizeFilename } from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 export function registerFileTools(
@@ -128,27 +126,7 @@ export function registerFileTools(
           try {
             const tags = await readTags(filePath)
             const ext = path.extname(filePath)
-
-            // Replace template placeholders with tag values
-            let newName = template
-            const replacements: Record<string, string> = {
-              artist: tags.artist ?? 'Unknown Artist',
-              title: tags.title ?? 'Unknown Title',
-              album: tags.album ?? 'Unknown Album',
-              genre: tags.genre ?? 'Unknown Genre',
-              year:
-                tags.year !== undefined ? String(tags.year) : 'Unknown Year',
-              bpm: tags.bpm !== undefined ? String(tags.bpm) : 'Unknown BPM',
-              key: tags.key ?? 'Unknown Key',
-            }
-
-            for (const [key, value] of Object.entries(replacements)) {
-              newName = newName.replace(
-                new RegExp(`\\{${key}\\}`, 'gi'),
-                sanitizeFilename(value),
-              )
-            }
-
+            const newName = expandTemplate(template, tags)
             const newPath = path.join(directory, `${newName}${ext}`)
 
             if (newPath !== filePath) {
@@ -234,26 +212,7 @@ export function registerFileTools(
           try {
             const tags = await readTags(filePath)
             const ext = path.extname(filePath)
-
-            // Replace template placeholders
-            let newRelativePath = template
-            const replacements: Record<string, string> = {
-              artist: tags.artist ?? 'Unknown Artist',
-              title: tags.title ?? 'Unknown Title',
-              album: tags.album ?? 'Unknown Album',
-              genre: tags.genre ?? 'Unknown Genre',
-              year:
-                tags.year !== undefined ? String(tags.year) : 'Unknown Year',
-              bpm: tags.bpm !== undefined ? String(tags.bpm) : 'Unknown BPM',
-              key: tags.key ?? 'Unknown Key',
-            }
-
-            for (const [key, value] of Object.entries(replacements)) {
-              newRelativePath = newRelativePath.replace(
-                new RegExp(`\\{${key}\\}`, 'gi'),
-                sanitizeFilename(value),
-              )
-            }
+            const newRelativePath = expandTemplate(template, tags)
 
             // If the template ends with a filename placeholder, use that;
             // otherwise append the original filename
@@ -321,12 +280,4 @@ export function registerFileTools(
   )
 }
 
-/**
- * Remove characters that are not safe in filenames.
- */
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+// sanitizeFilename imported from @bangersss/core

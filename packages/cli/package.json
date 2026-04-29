@@ -1,0 +1,25 @@
+{
+  "name": "@bangersss/cli",
+  "version": "0.3.4",
+  "description": "CLI for bangersss music organization",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "bangersss": "dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bangersss/core": "workspace:*",
+    "commander": "^13.1.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

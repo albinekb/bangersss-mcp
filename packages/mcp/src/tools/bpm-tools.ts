@@ -1,15 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { analyzeBpm, batchAnalyzeBpm } from '../audio/bpm-analyzer.js'
-import { analyzeKey, batchAnalyzeKey } from '../audio/key-analyzer.js'
 import {
+  analyzeBpm,
+  batchAnalyzeBpm,
+  analyzeKey,
+  batchAnalyzeKey,
   getKeyInfo,
   toCamelot,
   toOpenKey,
   getCompatibleKeys,
   areKeysCompatible,
   getAllKeys,
-} from '../audio/keys.js'
+} from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 export function registerBpmTools(

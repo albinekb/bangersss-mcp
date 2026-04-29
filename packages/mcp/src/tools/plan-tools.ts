@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { OperationSchema } from '../plans/types.js'
+import { OperationSchema } from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 export function registerPlanTools(

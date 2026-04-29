@@ -15,23 +15,26 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import * as path from 'node:path'
 import * as fs from 'node:fs/promises'
-import fg from 'fast-glob'
 import bytes from 'bytes'
 import {
   readTags,
   batchReadTags,
   type TrackMetadata,
-} from '../tags/tag-reader.js'
-import { analyzeBpm } from '../audio/bpm-analyzer.js'
-import { getKeyInfo } from '../audio/keys.js'
-import { isAudioFile, SUPPORTED_FORMATS } from '../util/audio-formats.js'
-import { walkFiles } from '../util/walker/walker.js'
-import { createSamplePackFilter } from '../util/walker/sample-pack-detector.js'
-import {
+  analyzeBpm,
+  getKeyInfo,
+  isAudioFile,
+  walkFiles,
+  createSamplePackFilter,
   createRenameOp,
   createWriteTagsOp,
   createSetBpmOp,
-} from '../plans/operations.js'
+  formatBytes,
+  sanitizeFilename,
+  buildLibraryPath,
+  expandTemplate,
+  checkDuplicates,
+  findDuplicatePaths,
+} from '@bangersss/core'
 import type { ServerContext } from '../server.js'
 
 interface ScannedTrack {
@@ -54,58 +57,7 @@ interface IngestAnalysis {
   suggestedPath?: string
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  )
-  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
-
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function buildLibraryPath(
-  libraryRoot: string,
-  tags: TrackMetadata,
-  template: string,
-  ext: string,
-): string {
-  const replacements: Record<string, string> = {
-    artist: tags.artist ?? 'Unknown Artist',
-    title: tags.title ?? 'Unknown Title',
-    album: tags.album ?? 'Unknown Album',
-    genre: tags.genre ?? 'Unknown Genre',
-    year: tags.year !== undefined ? String(tags.year) : 'Unknown Year',
-    bpm: tags.bpm !== undefined ? String(Math.round(tags.bpm)) : 'Unknown BPM',
-    key: tags.key ?? 'Unknown Key',
-  }
-
-  // Also add camelot key if available
-  if (tags.key) {
-    const keyInfo = getKeyInfo(tags.key)
-    if (keyInfo) {
-      replacements.camelot = keyInfo.camelot
-      replacements.openkey = keyInfo.openKey
-    }
-  }
-
-  let result = template
-  for (const [key, value] of Object.entries(replacements)) {
-    result = result.replace(
-      new RegExp(`\\{${key}\\}`, 'gi'),
-      sanitizeFilename(value),
-    )
-  }
-
-  return path.join(libraryRoot, `${result}${ext}`)
-}
+// formatBytes, sanitizeFilename, buildLibraryPath imported from @bangersss/core
 
 export function registerIngestTools(
   server: McpServer,
@@ -696,132 +648,13 @@ export function registerIngestTools(
     },
     async ({ incomingPaths, libraryPath }) => {
       try {
-        // Scan library
-        const exts = [...SUPPORTED_FORMATS]
-        const pattern = `*{${exts.join(',')}}`
-        const libraryFiles = await fg(`${libraryPath}/**/${pattern}`, {
-          absolute: true,
-          onlyFiles: true,
-        })
-
-        // Build library index: filename -> path, and tag index
-        const libraryIndex = new Map<string, string[]>()
-        const libraryTagIndex = new Map<string, string>() // "artist|title" -> path
-
-        for (const libFile of libraryFiles) {
-          const basename = path.basename(libFile).toLowerCase()
-          const existing = libraryIndex.get(basename) ?? []
-          existing.push(libFile)
-          libraryIndex.set(basename, existing)
-        }
-
-        // Batch read library tags for tag-based dedup
-        const libTagMap = await batchReadTags(libraryFiles, { concurrency: 8 })
-        for (const [libFile, tags] of libTagMap) {
-          if (tags.artist && tags.title) {
-            const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`
-            libraryTagIndex.set(key, libFile)
-          }
-        }
-
-        // Check each incoming file
-        const results: Array<{
-          incomingPath: string
-          duplicateType: 'exact_filename' | 'same_track' | 'similar' | 'none'
-          matchedLibraryPath?: string
-          details?: string
-        }> = []
-
-        for (const incoming of incomingPaths) {
-          const basename = path.basename(incoming).toLowerCase()
-          let found = false
-
-          // 1. Exact filename match
-          const filenameMatches = libraryIndex.get(basename)
-          if (filenameMatches && filenameMatches.length > 0) {
-            results.push({
-              incomingPath: incoming,
-              duplicateType: 'exact_filename',
-              matchedLibraryPath: filenameMatches[0],
-              details: `Same filename found in library (${filenameMatches.length} match${filenameMatches.length > 1 ? 'es' : ''})`,
-            })
-            found = true
-            continue
-          }
-
-          // 2. Same artist+title in tags
-          try {
-            const tags = await readTags(incoming)
-            if (tags.artist && tags.title) {
-              const key = `${tags.artist.toLowerCase()}|${tags.title.toLowerCase()}`
-              const match = libraryTagIndex.get(key)
-              if (match) {
-                results.push({
-                  incomingPath: incoming,
-                  duplicateType: 'same_track',
-                  matchedLibraryPath: match,
-                  details: `Same artist+title: ${tags.artist} - ${tags.title}`,
-                })
-                found = true
-                continue
-              }
-            }
-          } catch {
-            // Can't read tags, skip tag-based check
-          }
-
-          // 3. Similar filename (strip common suffixes like (1), _copy, etc.)
-          const normalized = basename
-            .replace(/\s*\(\d+\)\s*/, '')
-            .replace(/\s*_copy\s*/i, '')
-            .replace(/\s*-\s*copy\s*/i, '')
-            .replace(/\s+/g, ' ')
-            .trim()
-
-          for (const [libName, libPaths] of libraryIndex) {
-            const libNormalized = libName
-              .replace(/\s*\(\d+\)\s*/, '')
-              .replace(/\s+/g, ' ')
-              .trim()
-
-            if (libNormalized === normalized && libName !== basename) {
-              results.push({
-                incomingPath: incoming,
-                duplicateType: 'similar',
-                matchedLibraryPath: libPaths[0],
-                details: `Similar filename: "${path.basename(incoming)}" ≈ "${path.basename(libPaths[0])}"`,
-              })
-              found = true
-              break
-            }
-          }
-
-          if (!found) {
-            results.push({
-              incomingPath: incoming,
-              duplicateType: 'none',
-            })
-          }
-        }
-
-        const duplicates = results.filter((r) => r.duplicateType !== 'none')
+        const result = await checkDuplicates(incomingPaths, libraryPath)
 
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify(
-                {
-                  totalChecked: incomingPaths.length,
-                  librarySize: libraryFiles.length,
-                  duplicatesFound: duplicates.length,
-                  newFiles: results.filter((r) => r.duplicateType === 'none')
-                    .length,
-                  results,
-                },
-                null,
-                2,
-              ),
+              text: JSON.stringify(result, null, 2),
             },
           ],
         }
@@ -1099,46 +932,7 @@ export function registerIngestTools(
         // 3. Check for duplicates
         let duplicatePaths = new Set<string>()
         if (skipDuplicates) {
-          const libraryExts = [...SUPPORTED_FORMATS]
-          const libPattern = `*{${libraryExts.join(',')}}`
-          const libraryFiles = await fg(`${libraryPath}/**/${libPattern}`, {
-            absolute: true,
-            onlyFiles: true,
-          })
-
-          // Build indexes: filename-based (fast) + tag-based (batch parallel)
-          const filenameIndex = new Map<string, string>()
-
-          for (const libFile of libraryFiles) {
-            filenameIndex.set(path.basename(libFile).toLowerCase(), libFile)
-          }
-
-          const tagIndex = new Map<string, string>()
-          const libTagMap = await batchReadTags(libraryFiles, {
-            concurrency: 8,
-          })
-          for (const [libFile, libTags] of libTagMap) {
-            if (libTags.artist && libTags.title) {
-              tagIndex.set(
-                `${libTags.artist.toLowerCase()}|${libTags.title.toLowerCase()}`,
-                libFile,
-              )
-            }
-          }
-
-          for (const track of trackData) {
-            const basename = path.basename(track.path).toLowerCase()
-            if (filenameIndex.has(basename)) {
-              duplicatePaths.add(track.path)
-              continue
-            }
-            if (track.tags?.artist && track.tags?.title) {
-              const key = `${track.tags.artist.toLowerCase()}|${track.tags.title.toLowerCase()}`
-              if (tagIndex.has(key)) {
-                duplicatePaths.add(track.path)
-              }
-            }
-          }
+          duplicatePaths = await findDuplicatePaths(trackData, libraryPath)
         }
 
         // 4. Stage non-duplicate files

@@ -100,7 +100,7 @@ describe('Ingest tools integration', () => {
 
   describe('check_duplicates logic', () => {
     it('detects duplicates by artist+title', async () => {
-      const { readTags } = await import('../../src/tags/tag-reader.js')
+      const { readTags } = await import('@bangersss/core')
 
       // Build library tag index
       const libFiles = await findMp3Files(libraryDir)
@@ -159,7 +159,7 @@ describe('Ingest tools integration', () => {
   describe('stage_ingest via overlay', () => {
     it('stages files through overlay without touching disk', async () => {
       const { context } = createServer()
-      const { readTags } = await import('../../src/tags/tag-reader.js')
+      const { readTags } = await import('@bangersss/core')
 
       const files = await findMp3Files(incomingDir)
 
@@ -200,7 +200,7 @@ describe('Ingest tools integration', () => {
   describe('plan creation for ingest', () => {
     it('creates a plan with rename operations', async () => {
       const { context } = createServer()
-      const { createRenameOp } = await import('../../src/plans/operations.js')
+      const { createRenameOp } = await import('@bangersss/core')
 
       const plan = context.planManager.createPlan(
         'Test Ingest',
@@ -231,7 +231,7 @@ describe('Ingest tools integration', () => {
 
     it('executes plan in dry mode without moving files', async () => {
       const { context } = createServer()
-      const { createRenameOp } = await import('../../src/plans/operations.js')
+      const { createRenameOp } = await import('@bangersss/core')
 
       const plan = context.planManager.createPlan('Dry Test', libraryDir)
       context.planManager.addOperation(

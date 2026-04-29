@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 
 import NodeID3 from 'node-id3'
 
-import { createServer } from '../../src/server.js'
+import { createServer } from '../src/server.js'
 
 function createMinimalMp3(tags: NodeID3.Tags): Buffer {
   const frameData = Buffer.alloc(417)
