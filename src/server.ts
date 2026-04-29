@@ -10,9 +10,17 @@ import { registerRekordboxTools } from './tools/rekordbox-tools.js'
 import { registerEngineDjTools } from './tools/engine-dj-tools.js'
 import { registerFileTools } from './tools/file-tools.js'
 import { registerIngestTools } from './tools/ingest-tools.js'
+import { registerInventoryTools } from './tools/inventory-tools.js'
+import { registerInventoryResources } from './tools/inventory-resources.js'
 import { OverlayFS } from './overlay/overlay-fs.js'
 import { PlanManager } from './plans/plan-manager.js'
 import { PlaylistManager } from './playlists/playlist-manager.js'
+import { SQLiteService } from './inventory/sqlite-service.js'
+import { HashService } from './inventory/hash-service.js'
+import { AudioMetadataService } from './inventory/audio-metadata-service.js'
+import { ArchiveIndexService } from './inventory/archive-index-service.js'
+import { InventoryService } from './inventory/inventory-service.js'
+import { MovePlanService } from './inventory/move-plan-service.js'
 import { createLogger } from './util/logger.js'
 
 const log = createLogger('server')
@@ -21,6 +29,8 @@ export interface ServerContext {
   overlay: OverlayFS
   planManager: PlanManager
   playlistManager: PlaylistManager
+  inventory: InventoryService
+  movePlans: MovePlanService
 }
 
 export function createServer(): { server: McpServer; context: ServerContext } {
@@ -32,8 +42,25 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   const overlay = new OverlayFS()
   const planManager = new PlanManager()
   const playlistManager = new PlaylistManager()
+  const sqlite = new SQLiteService()
+  const hashService = new HashService()
+  const audioMetadata = new AudioMetadataService()
+  const archiveIndex = new ArchiveIndexService(audioMetadata)
+  const inventory = new InventoryService(
+    sqlite,
+    hashService,
+    audioMetadata,
+    archiveIndex,
+  )
+  const movePlans = new MovePlanService(inventory, overlay, hashService)
 
-  const context: ServerContext = { overlay, planManager, playlistManager }
+  const context: ServerContext = {
+    overlay,
+    planManager,
+    playlistManager,
+    inventory,
+    movePlans,
+  }
 
   // Register all tool groups
   registerScanTools(server, context)
@@ -46,6 +73,8 @@ export function createServer(): { server: McpServer; context: ServerContext } {
   registerEngineDjTools(server, context)
   registerFileTools(server, context)
   registerIngestTools(server, context)
+  registerInventoryTools(server, context)
+  registerInventoryResources(server, context)
 
   log.info('bangersss-mcp server initialized')
 
