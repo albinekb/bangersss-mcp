@@ -13,6 +13,7 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
+    "test": "pnpm --dir=../.. vitest run packages/mcp/tests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
